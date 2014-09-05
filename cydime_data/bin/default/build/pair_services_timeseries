@@ -1,0 +1,76 @@
+#! /bin/bash
+
+# use filtered data to create timeseries for records, packets, and bytes
+infile=""
+outfile=""
+dest_dir=""
+bin_dir=""
+fname=""
+map_dir=""
+temp_infile="$RANDOM.in"
+temp_outfile="$RANDOM.out"
+# seconds==bin-size for rwuniq
+seconds=""
+
+# don't clobber stuff
+set -C
+
+# do some magic to get (non-absolute) name of script for naming output
+myname=$(echo $0 | rev | cut -d/ -f1 | rev)
+
+usage() { 
+    echo >&2 "usage $myname: 
+       -i incoming_records
+       -o outgoing_records
+       -d dest_dir
+       -s partition_size (in seconds)
+       -b bin_dir
+       -n outfile name
+       -m map_dir
+       "
+    exit 1
+}
+
+if [[ $# != 14 ]]; then
+    usage
+fi
+
+OPTIND=1
+
+while getopts ":i:o:d:s:b:n:m:" opt; do
+    case "$opt" in
+        i)  infile=$OPTARG
+            ;;
+        o)  outfile=$OPTARG
+            ;;
+        d)  dest_dir=$OPTARG
+            ;;
+        s)  seconds=$OPTARG
+            ;;
+        b)  bin_dir=$OPTARG
+            ;;
+        n)  fname=$OPTARG
+            ;;
+        m)  map_dir=$OPTARG
+            ;;
+        *)  usage
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+rwcat $infile | rwuniq --pmap-file=$map_dir/services.pmap \
+    --fields=dIP,sIP,sval,dval,sTime --values=Records,Packets,Bytes \
+    --bin-time=$seconds --sort-output --timestamp-format=epoch --no-column \
+    --column-separator=, --no-final-delimiter > $dest_dir/$temp_infile
+
+rwcat $outfile | rwuniq --pmap-file=$map_dir/services.pmap \
+    --fields=sIP,dIP,sval,dval,sTime --values=Records,Packets,Bytes \
+    --bin-time=$seconds --sort-output --timestamp-format=epoch --no-column \
+    --column-separator=, --no-final-delimiter > $dest_dir/$temp_outfile
+
+# merge features with python script
+$bin_dir/default/merge/pair_services_timeseries_merge.py $dest_dir/$temp_infile \
+    $dest_dir/$temp_outfile $dest_dir $fname
+# cleanup tmp files
+rm $dest_dir/$temp_infile $dest_dir/$temp_outfile

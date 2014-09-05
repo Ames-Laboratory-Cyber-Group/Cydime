@@ -1,0 +1,101 @@
+#! /usr/bin/env python
+
+import argparse
+import logging
+import sys
+
+from datetime import date, datetime, timedelta
+from subprocess import Popen, PIPE
+
+import Build
+import Config as Conf
+import Setup
+
+class CydimeParser(argparse.ArgumentParser):
+    def error(self, message):
+        sys.stderr.write('error: {0}\n'.format(message))
+        self.print_help()
+        sys.exit(2)
+
+
+def err_exit(msg=None):
+    if msg:
+        sys.stderr.write(msg + '\n')
+    parser.print_help()
+    sys.exit(1)
+
+
+# save secondary args for later use...sorta hacky
+secondary_args = sys.argv[2:]
+sys.argv = sys.argv[:2]
+
+parser = CydimeParser()
+group = parser.add_mutually_exclusive_group()
+group.add_argument('-f', '--filter', action='store_true')
+group.add_argument('-b', '--build', action='store_true')
+group.add_argument('-e', '--explore', action='store_true')
+
+args = parser.parse_args()
+
+# print help msg and exit if no args given
+if len(sys.argv) == 1:
+    err_exit('No valid arguments supplied')
+
+# add secondary args back in
+sys.argv = sys.argv + secondary_args
+
+current_date = date.today()
+yesterday = current_date - timedelta(1)
+past_date = current_date - timedelta(Conf.days_to_analyze)
+
+Setup.setup_logging()
+
+if args.build:
+
+    parser = CydimeParser()
+    parser.add_argument('-b', '--build', action='store_true', required=True)
+    parser.add_argument('-s', '--start-date', action='store', default=past_date)
+    parser.add_argument('-e', '--end-date', action='store', default=current_date)
+    parser.add_argument('-u', '--update', action='store_true', default=False)
+    parser.add_argument('-n', '--initial', action='store_true', default=False)
+    parser.add_argument('-m', '--mail', action='store_true', default=False)
+
+    args = parser.parse_args()
+
+    Build.build(args.start_date, args.end_date, Conf.days_to_analyze,
+                args.update, args.mail, args.initial)
+
+elif args.explore:
+    parser = CydimeParser()
+    parser.add_argument('-e', '--explore', action='store_true', required=True)
+    parser.add_argument('-d', '--date', action='store', default=yesterday)
+    args = parser.parse_args()
+
+    command = '{0} -Xmx{1}g -cp '.format(Conf.java_path, Conf.java_mem)
+    command += '/etc/cydime:{0}/Cydime.jar '.format(Conf.bin_dir)
+    command += 'gov.ameslab.cydime.explorer.controller.CydimeExplorer {0}'\
+        .format(str(args.date).replace('-', '/'))
+
+    print 'Starting Cydime Explorer\nThis may take a while...please be patient'
+    p = Popen(command.split(), stdout=PIPE, stderr=PIPE)
+    output, error = p.communicate()
+    print error
+    
+elif args.filter:
+    parser = CydimeParser()
+    parser.add_argument('-f', '--filter', action='store_true', required=True)
+    parser.add_argument('-s', '--start-date', action='store', default=past_date)
+    parser.add_argument('-e', '--end-date', action='store', default=current_date)
+    parser.add_argument('-p', '--pass-directory', action='store', required=True)
+    parser.add_argument('-t', '--threads', action='store', default='1')
+
+    args = parser.parse_args()
+
+    commnad = '{0}/filter-all -s {1} -e {2} -d {3} -t {4}'\
+        .format(Conf.bin_dir, args.start_date, args.end_date,\
+                args.pass_directory, args.threads)
+    p = Popen(command, stdout=PIPE, stderr=PIPE, shell=True)
+    output, error = p.communicate()
+
+else:
+    err_exit('No valid arguments supplied')

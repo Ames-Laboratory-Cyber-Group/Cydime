@@ -1,0 +1,71 @@
+#! /bin/bash
+
+# use filtered data to create netflow features
+infile=""
+outfile=""
+dest_dir=""
+fname=""
+temp_infile="$RANDOM.in"
+temp_outfile="$RANDOM.out"
+
+# turn off clobber mode
+set -C
+
+# do some magic to get (non-absolute) name of script for naming output
+myname=$(echo $0 | rev | cut -d/ -f1 | rev)
+
+usage() { 
+    echo >&2 "usage $myname: 
+       -i incoming_records
+       -o outgoing_records
+       -d dest_dir
+       -b bin_dir
+       -n outfile name
+       "
+    exit 1
+}
+
+
+if [[ $# != 10 ]]; then
+    usage
+fi
+
+OPTIND=1
+
+while getopts ":i:o:d:b:n:" opt; do
+    case "$opt" in
+        i)  infile=$OPTARG
+            ;;
+        o)  outfile=$OPTARG
+            ;;
+        d)  dest_dir=$OPTARG
+            ;;
+        b)  bin_dir=$OPTARG
+            ;;
+        n)  fname=$OPTARG
+            ;;
+        *)  usage
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+rwcat $infile | rwuniq --fields=sIP,scc \
+    --values=records,bytes,sTime-Earliest,eTime-Latest,dIP-Distinct,Distinct:sPort,Distinct:dPort \
+    --no-final-delimiter --no-columns --sort-output \
+    --column-separator=, --timestamp-format=epoch > $dest_dir/$temp_infile
+        
+rwcat $outfile | rwuniq --fields=dIP,dcc \
+    --values=records,bytes,sTime-Earliest,eTime-Latest,sIP-Distinct,Distinct:sPort,Distinct:dPort \
+    --no-final-delimiter --no-columns --sort-output \
+    --column-separator=, --timestamp-format=epoch > $dest_dir/$temp_outfile
+
+
+# merge features with python script
+$bin_dir/default/merge/netflow_merge.py $dest_dir/$temp_infile \
+    $dest_dir/$temp_outfile $dest_dir $fname
+
+echo $dest_dir/$temp_infile
+
+# remove temporary building files
+rm $dest_dir/$temp_infile $dest_dir/$temp_outfile

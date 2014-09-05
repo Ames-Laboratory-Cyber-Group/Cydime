@@ -1,4 +1,5 @@
-Cy-Dime
-=======
+======
+Cydime
+======
 
-Cyber Dynamic Impact Modeling Engine - (An Ames Laboratory (US DOE) Supported Project)
+Cyber Dynamic Impact Modeling Engine *An Ames Laboratory (US DOE) Supported Project*

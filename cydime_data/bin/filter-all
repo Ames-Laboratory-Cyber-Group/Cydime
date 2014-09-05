@@ -1,0 +1,65 @@
+#! /bin/bash
+
+# filter set of incoming and outgoing traffic for later usage
+start_date=""
+end_date=""
+dest_dir=""
+threads=""
+
+# don't clobber stuff
+set -C
+
+echo $start_date
+echo $dest_dir
+
+usage() { 
+    echo >&2 "usage: -s year/month/day:hh
+       -e year/month/day:hh
+       -d /path/to/pass/directory
+       -t threads
+
+       where -s = start time
+       and   -e = end time"
+    exit 1
+}
+
+if [[ $# != 8 ]]; then
+    usage
+fi
+
+OPTIND=1
+
+while getopts ":s:e:d:t:" opt; do
+    case "$opt" in
+        s)  start_date=$OPTARG
+            ;;
+        e)  end_date=$OPTARG
+            ;;
+        d)  dest_dir=$OPTARG
+            ;;
+        t)  threads=$OPTARG
+            ;;
+        *)  usage
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+# filter out our current external IP traffic
+myip=$(curl -s ifconfig.me)
+
+mkdir -p $dest_dir
+
+#rwfilter --start-date=$start_date --end-date=$end_date --type=all \
+#--not-any-cidr=$myip --stype=2 --threads=$threads --pass-destination=$dest_dir/in.filter
+#
+#rwfilter --start-date=$start_date --end-date=$end_date --type=all \
+#--not-any-cidr=$myip --dtype=2 --threads=$threads --pass-destination=$dest_dir/out.filter
+
+### Test out the IPSet exclusion field ###
+
+rwfilter --start-date=$start_date --end-date=$end_date --type=all \
+--not-anyset=/silk/sets/exclude.set --stype=2 --threads=$threads --pass-destination=$dest_dir/in.filter
+
+rwfilter --start-date=$start_date --end-date=$end_date --type=all \
+--not-anyset=/silk/sets/exclude.set --dtype=2 --threads=$threads --pass-destination=$dest_dir/out.filter

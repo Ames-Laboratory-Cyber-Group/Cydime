@@ -1,0 +1,602 @@
+#! /usr/bin/env python
+
+import argparse
+import datetime
+import os
+import re
+import sys
+
+from datetime import date, timedelta
+from multiprocessing import Pool, cpu_count
+from subprocess import Popen, PIPE
+
+from sqlalchemy import select, delete, join, bindparam
+
+import Common as Com
+import Config
+import ScraperConfig as Conf
+import ScraperDatabase as DB
+
+TWO_NUM_MATCH = re.compile(r'\D\d+\D\d+')
+
+class IPSort(object):
+    
+    # status is either unseen (0) or expired (1)
+    # top_serv is either HTTP/S (0) or !HTTP/S (1)
+    def __init__(self, ip_addr, status, top_serv, date=None):
+        self.ip_addr    = ip_addr
+        self.status     = status
+        self.top_serv   = top_serv
+        self.date       = date
+
+    def __str__(self):
+        return '{0},{1},{2},{3}'.format(self.ip_addr, self.status, self.top_serv, self.date)
+
+# current date is datetime.date
+def get_yesterdays_ips(current_date):
+    '''Collect IP addresses seen yesterday.
+
+    :param current_date: today's date
+    :type current_date: datetime.date
+
+    :returns: dict -- ip (as long) -> top service (str)
+    '''
+    d = {}
+
+    dir_name = Com.date_to_path(current_date)
+    with open(dir_name + '/' + Conf.ip_list, 'r') as f:
+        for line in f:
+            line = line.strip().split(',')
+            if len(line) >= 2:
+                d[Com.convert_ip_to_long(line[0])] = line[1]
+
+    return d
+
+def join_delete(yd, today):
+    
+    old_date = today - timedelta(Conf.expire_interval)
+
+    engine, tmp_table, scraper_table = DB.get_db_engine()
+    conn = engine.connect()
+
+    # clean up tmp table first
+    conn.execute(tmp_table.delete())
+    
+    # save just the IPs in a list for mass insertion
+    y = [{'ip_addr': key} for key in yd.keys()]
+    # bulk insert
+    conn.execute(tmp_table.insert(), y)
+
+    # subquery
+    s = select([tmp_table.c.ip_addr]).\
+        where(tmp_table.c.ip_addr == scraper_table.c.ip_addr)
+
+    # execute encolosing statement
+    stmt = tmp_table.update().\
+        values(ip_type=1).\
+        where(tmp_table.c.ip_addr == s)
+    conn.execute(stmt)
+
+    # subquery
+    s = select([tmp_table.c.ip_addr]).\
+        where(tmp_table.c.ip_addr == scraper_table.c.ip_addr).\
+        where(scraper_table.c.date >= old_date)
+
+    # execute encolsing statement
+    stmt = tmp_table.update().\
+        values(ip_type=2).\
+        where(tmp_table.c.ip_addr == s)
+    conn.execute(stmt)
+
+    # 1 is seen and expired
+    # 2 is seen and active
+    # None is unseen
+
+    s = select([scraper_table.c.ip_addr, scraper_table.c.date]).\
+        where(tmp_table.c.ip_type == 1).\
+        where(scraper_table.c.ip_addr == tmp_table.c.ip_addr)
+    seen_expired = conn.execute(s).fetchall()
+
+    s = select([tmp_table]).where(tmp_table.c.ip_type == None)
+    unseen = conn.execute(s).fetchall()
+
+    conn.close()
+
+    return (seen_expired, unseen)
+
+# return comparison re: github priority
+def priority_compare(ip1, ip2):
+    '''Custom comparison function for comparing IP addresses.
+
+    Priority is unseen > expired > HTTP/S > !HTTP/S
+
+    :param ip1: first IP to compare
+    :type ip1: IPSort
+    :param ip2: second IP to compare
+    :type ip2: IPSort
+
+    :returns: int -- 1 iff ip1 > ip2, -1 iff ip1 < ip2, 0 iff ip1 == ip2
+    '''
+    
+    # status is either unseen (0) or expired (1)
+    # top_serv is either HTTP/S (0) or !HTTP/S (1)
+
+    # if they have different statuses, just compare on those
+    if ip1.status != ip2.status:
+        return ip1.status - ip2.status
+    # if both unseen, just compare on top service
+    if ip1.status == 0:
+        return ip1.top_serv - ip2.top_serv
+    # these are expired
+    else:
+        # check top service first
+        if ip1.top_serv != ip2.top_serv:
+            return ip1.top_serv - ip2.top_serv
+        # use date for tiebreaker
+        else:
+            if ip1.date < ip2.date:
+                return -1
+            elif ip1.date > ip2.date:
+                return 1
+            else:
+                return 0
+
+# sort according to ranking
+def ranked_sort(seen_expired, unseen, yd):
+    '''Sort list of IP addresses based on priority_compare 
+
+    :param seen_expired: list of IP addresses that we've seen before and
+        are 'expired'
+    :param unseen: list of IP addresses we have not seen before
+    :param yd: yesterday's date
+
+    :returns: list -- int -- IP addresses (as long) sorted by priority_compare
+    '''
+
+    sort_list = []
+    
+    # status is either unseen (0) or expired (1)
+    # top_serv is either HTTP/S (0) or !HTTP/S (1)
+
+    for i in unseen:
+        ip = i[0]
+        serv = ''
+        if ip in yd:
+            serv = yd[ip]
+        sort_list.append(IPSort(i[0], 0, 0 if serv == 'http' else 1))
+
+    for j in seen_expired:
+        ip = j[0]
+        serv = ''
+        if ip in yd:
+            serv = yd[ip]
+        sort_list.append(IPSort(j[0], 1, 0 if serv == 'http' else 1, j[1]))
+
+    #l = sorted(sort_list, cmp=priority_compare)[:Conf.threshold]
+    l = sorted(sort_list, cmp=priority_compare)[:Conf.threshold]
+
+    return [Com.convert_long_to_ip(x.ip_addr) for x in l]
+
+def process_host(line):
+
+    ip = line.strip()
+    
+    command = 'host ' + ip
+    p = Popen(command.split(), stdout=PIPE, stderr=PIPE)
+    host, err = p.communicate()
+    if err:
+        return None
+
+    ret = ''
+
+    if 'domain name pointer' in host:
+        last = ''
+        # save last line with dnp in it
+        for line in host.split('\n'):
+            if 'domain name pointer' in line:
+                last = line
+        host = last.split('domain name pointer')[1]
+        host = host.strip('.').strip('*.').strip('\032').strip()
+        dynamic = dynamic_ip(host, ip)
+        if len(host) == 0:
+            ret = 'NA'
+        elif dynamic is True:
+            ret = 'DYNAMIC,' + host
+        else:
+            ret = host
+    else:
+        ret = 'NA'
+
+    # strip non-ascii chars
+    return ip + ',{0}'.format(''.join(i for i in ret if ord(i) < 128))
+
+def process_whois(line):
+    '''Do a whois lookup on an IP address
+
+    :param line: line from file (just an IP address) on which to do whois query
+    :type line: str
+
+    :returns: dict -- whois fields we need for this IP
+
+    .. note: Currently just calling whois from cli.  This is bad and will
+        be changed/fixed in future versions
+    '''
+    ip = line.strip()
+
+    command = 'whois ' + ip
+    p = Popen(command.split(), stdout=PIPE, stderr=PIPE)
+    whois, err = p.communicate()
+
+    # remove non-ascii chars from whois
+    whois = ''.join(i for i in whois if ord(i) < 128)
+
+
+    d = {}
+    d['ip'] = ip
+
+    if err:
+        return d
+
+    source_map = {
+        'whois.arin.net': 'arin', 
+        'krnic': 'krnic',
+        'whois.lacnic.net': 'lacnic',
+    }
+
+    source_alt = None
+
+    for line in whois.split('\n'):
+        line = line.lower().strip()
+        if 'netname:' in line:
+            d['netname'] = line.split('netname:')[1].strip()
+        elif 'country:' in line:
+            d['country'] = line.split('country:')[1].strip()
+        elif 'source:' in line:
+            d['source'] = line.split('source:')[1].split('#')[0].strip()
+            if d['source'] in source_map:
+                d['source'] = source_map[d['source']]
+        # check for source_alt
+        for key in source_map:
+            if key in line:
+                source_alt = source_map[key]
+
+    if 'source' not in d and source_alt:
+        d['source'] = source_alt
+
+    return d
+    
+
+# seen_expired and unseen are sets of IPs
+# if seen_expired => update
+# if unseen       => insert
+def update_host_db(res, seen_expired, today):
+    '''Update persistent database after doing host lookups.
+
+    :param res: results of host lookups
+    :type res: list
+    :param seen_expired: list of IPs we've seen before and are 'expired'
+    :param today: today's date
+    :type today: datetime.date
+    '''
+    engine, tmp_table, scraper_table = DB.get_db_engine()
+    conn = engine.connect()
+
+    stmt = scraper_table.update().\
+        where(scraper_table.c.ip_addr == bindparam('old_ip_addr')).\
+        values(host = bindparam('new_host'),
+               date = bindparam('new_date'))
+
+    update_list = []
+    add_list = []
+
+    for i in res:
+
+        k = Com.convert_ip_to_long(i.split(',')[0])
+        if k in seen_expired:
+            update_list.append({'old_ip_addr': k,
+                                'new_host': i,
+                                'new_date': today})
+        else:
+            add_list.append({'ip_addr': k, 
+                             'date': today,
+                             'host': i})
+
+    if update_list:
+        conn.execute(stmt, update_list)
+    if add_list:
+        conn.execute(scraper_table.insert(), add_list)
+    conn.close()
+    
+
+def write_host_file(results):
+    '''Write results of host lookups to host file for model to use.
+
+    :param results: list of host lookup results
+    :type results: list
+    '''
+    with open(Conf.crawler_ip_dom, 'w') as f:
+        for each in results:
+            f.write(each + '\n')
+
+# res here is a dict of whois key/values
+# XXX unseen IPs get added in host step so we can just do an update here
+def update_whois_db(res, today):
+    '''Update persistent database after doing whois lookups.
+
+    :param res: results of whois
+    :type res: list
+    :param today: today's date
+    :type today: datetime.date
+    '''
+
+    engine, tmp_table, scraper_table = DB.get_db_engine()
+    conn = engine.connect()
+
+    stmt = scraper_table.update().\
+        where(scraper_table.c.ip_addr == bindparam('old_ip_addr')).\
+        values(whois = bindparam('new_whois'),
+               date = bindparam('new_date'))
+
+    update_list = []
+
+    for d in res:
+        whs = ''
+        if 'netname' in d and 'source' in d and 'country' in d:
+            whs = d['ip'] + ',' + d['netname'] + '.' + d['country'] + '.' + d['source']
+        else:
+            whs = None
+
+        update_list.append({'old_ip_addr': Com.convert_ip_to_long(d['ip']),
+                            'new_whois': whs,
+                            'new_date': today})
+
+    conn.execute(stmt, update_list)
+    conn.close()
+
+def write_whois_file(results):
+    '''Write results of whois lookups to whois file for model to use.
+
+    :param results: list of whois lookup results
+    :type results: list
+    '''
+    with open(Conf.crawler_ip_whois, 'w') as f:
+        for i in results:
+            if 'country' in i and 'source' in i and 'netname' in i:
+                f.write(i['ip'] + ',' + i['netname'] + '.' +\
+                                i['country'] + '.' + i['source'] + '\n')
+            else:
+                f.write(i['ip'] + ',NA\n')
+
+def web_scrape():
+    '''Call web scraper on list of IPs to scrape.
+
+    .. note: Currently using Java to do web scraping.  This is not ideal and
+        will be transitioned to scrapy in future versions.
+    '''
+    def do_cmd(cmd):
+        p = Popen(cmd, stdin=PIPE, stdout=PIPE, shell=True)
+        p.communicate()
+
+    do_cmd('{0} -cp {1}/CydimeCrawler.jar:. gov.ameslab.cydime.crawl.WebCrawlerWrapper'.format(Conf.java_path, Config.bin_dir))
+    do_cmd('{0} -cp {1}/CydimeCrawler.jar:. gov.ameslab.cydime.convert.MergeToText {2} {3}'.format(Conf.java_path, Config.bin_dir, Conf.crawler_web_output, Conf.crawler_web_merged))
+    do_cmd('/bin/cp {0}/* {1}'.format(Conf.crawler_mission_merged, Conf.crawler_web_merged))
+    do_cmd('{0}/bin/mallet import-dir --remove-stopwords --extra-stopwords {1}/stoplists/all.txt --input {2} --output {3}/web.mallet'.format(Conf.mallet_path, Conf.mallet_path, Conf.crawler_web_merged, Conf.dst_dir))
+    do_cmd('{0} -cp {1}/CydimeCrawler.jar:. gov.ameslab.cydime.convert.MapDomDoc'.format(Conf.java_path, Config.bin_dir))
+    do_cmd('{0} -cp {1}/CydimeCrawler.jar:. gov.ameslab.cydime.convert.MalletToDistance'.format(Conf.java_path, Config.bin_dir))
+
+def do_lookups(ip_list, seen_expired, today):
+    '''Do host lookups, whois lookups, and web scraping.
+
+    :param ip_list: list of IPs to lookup
+    :type ip_list: list
+    :param seen_expired: list of IPs that we've seen before but are 'expired'
+    :type seen_expired: list
+    :param today: today's date
+    :type today: datetime.date
+    '''
+    pool = Pool(cpu_count())
+
+    results = pool.map(process_host, ip_list)
+    update_host_db(results, seen_expired, today)
+    write_host_file(results)
+
+    results = pool.map(process_whois, ip_list)
+    update_whois_db(results, today)
+    write_whois_file(results)
+
+    web_scrape()
+      
+    # retire old IPs and delete tmp table
+    cleanup_db(today)
+    
+    merge_web_info()
+
+def merge_web_info():
+    '''Write new lookup files for model and merge the web-crawled text.
+    '''
+    engine, tmp_table, scraper_table = DB.get_db_engine()
+    conn = engine.connect()
+
+    s = select([scraper_table.c.host])
+    res = conn.execute(s)
+    hosts = set(x[0].split(',')[1] for x in res)
+    conn.close()
+
+    # merge DomDocsMap.csv
+    domDocs = readCSV(Conf.label_dom_doc)
+    newDomDocs = readCSV(Conf.crawler_dom_doc)
+
+    for key in newDomDocs:
+        domDocs[key] = newDomDocs[key]
+
+    docs = set()
+    # as we write new file, if host not in hosts: continue
+    # else, if host in newDomDocs, write newDomDocs[host]
+    #       else, write oldDomDocs[host]
+
+    with open(Conf.crawler_dom_doc, 'w') as f:
+        for key in domDocs:
+            if key in hosts:
+                f.write(key + ',' + domDocs[key] + '\n')
+                docs.add(domDocs[key])
+
+    # merge missionSims.csv
+    missionSims = readCSV(Conf.lexical_mission_sim)
+    newMissionSims = readCSV(Conf.crawler_mission_sim)
+
+    for key in newMissionSims:
+        missionSims[key] = newMissionSims[key]
+
+    # XXX replace with actual Conf.missionSimsWhatever path when this is less buggy
+    with open(Conf.crawler_mission_sim, 'w') as f:
+        for key in missionSims:
+            if key in docs:
+                f.write(key + ',' + missionSims[key] + '\n')
+
+    # delete retired docs
+    for f in os.listdir(Conf.crawler_web_merged):
+        p = os.join(Conf.crawler_web_merged, f)
+        if os.path.isfile(p) and f not in docs:
+            os.remove(p)
+
+def readCSV(file_path):
+    '''Read the type of CSV files we're using and return
+    dict.
+
+    :param file_path: full path to file we need to read
+    :type file_path: str
+    
+    :returns: dict
+    '''
+    d = {}
+    with open(file_path, 'r') as f:
+        for line in f:
+            line = line.strip().split(',')
+            d[line[0]] = ','.join(line[1:])
+
+    return d
+
+def dynamic_ip(host, ip):
+    '''Return true iff we 'think' ip is dynamic.
+
+    :param host: hostname we're checking
+    :type host: str
+    :param ip: ip address to check
+    :type ip: str
+
+    :returns: bool -- true iff we 'think' IP is dynamic, else false
+    '''
+
+    if TWO_NUM_MATCH.search(host) is None:
+        if contains_ip(host, ip):
+            return True
+        else:
+            return False
+    return True
+
+def pad_ip(ip_seg):
+    '''Pad ip_seg with zeros until it's length 3.
+
+    :param ip_seg: segment of IP address to pad
+    :type ip_seg: str
+
+    :returns: str -- ip_seg padded to length 3 with zeros
+    '''
+    if len(ip_seg) == 1:
+        ip_seg = '00' + ip_seg
+    elif len(ip_seg) == 2:
+        ip_seg = '0' + ip_seg
+    return ip_seg
+
+def contains_ip(host, ip):
+    '''Check if host contains all or part of ip.
+
+    :param host: hostname to check
+    :type host: str
+    :param ip: IP to check
+    :type ip: str
+
+    :returns: bool -- true iff host contains all or part of ip, else false
+    '''
+
+    # check for IP as string with no delims in host
+    ip_no_delims = ''.join(ip.split('.'))
+    ip_pad_zeros = ''.join([pad_ip(i) for i in ip.split('.')])
+    # ip as long string
+    if ip_no_delims in host or ip_no_delims[::-1] in host:
+        return True
+    # ip with segments zero-padded to length 3
+    if ip_pad_zeros in host or ip_pad_zeros[::-1] in host:
+        return True
+    return False
+
+def cleanup_db(today):
+    '''Drop any 'retired' IPs and delete tmp table
+
+    :param today: today's date
+    :type today: datetime.date
+    '''
+    old_date = today - timedelta(Conf.retire_interval)
+
+    engine, tmp_table, scraper_table = DB.get_db_engine()
+    conn = engine.connect()
+
+    stmt = delete(scraper_table, scraper_table.c.date <= old_date)
+
+    conn.execute(stmt)
+    conn.execute(tmp_table.delete())
+    conn.close()
+
+def write_final_files(today):
+    '''Dump DB to files.
+
+    :param today: today's date
+    :type today: datetime.date
+    '''
+    engine, tmp_table, scraper_table = DB.get_db_engine()
+    conn = engine.connect()
+
+    s = select([scraper_table.c.ip_addr, scraper_table.c.host]).where(scraper_table.c.host != None)
+    res = conn.execute(s)
+    with open(Conf.crawler_ip_dom, 'w') as f:
+        for row in res:
+            f.write('{0}\n'.format(row[1]))
+
+    s = select([scraper_table.c.ip_addr, scraper_table.c.whois]).where(scraper_table.c.whois != None)
+    res = conn.execute(s)
+    with open(Conf.crawler_ip_whois, 'w') as f:
+        for row in res:
+            f.write('{0}\n'.format(row[1]))
+    conn.close()
+
+def main():
+    today = datetime.date.today() - timedelta(1)
+
+    yd = get_yesterdays_ips(today)
+    seen_expired, unseen = join_delete(yd, today)
+    lookup_list = ranked_sort(seen_expired, unseen, yd)
+    seen_expired = set([s[0] for s in seen_expired])
+    do_lookups(lookup_list, seen_expired, today)
+    write_final_files(today)
+
+def mission_scrape():
+    '''when scraper is first run, we just scrape the site's own
+    hompage.
+    '''
+    def do_cmd(cmd):
+        p = Popen(cmd, stdin=PIPE, stdout=PIPE, shell=True)
+        p.communicate()
+
+    do_cmd('{0} -cp {1}/CydimeCrawler.jar:. gov.ameslab.cydime.crawl.WebCrawlerWrapper -mission'.format(Conf.java_path, Config.bin_dir))
+    do_cmd('{0} -cp {1}/CydimeCrawler.jar:. gov.ameslab.cydime.convert.MergeToText {2} {3}'.format(Conf.java_path, Config.bin_dir, Conf.crawler_mission_output, Conf.crawler_mission_merged))
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-m', '--mission', action='store_true', default=False)
+
+    args = parser.parse_args()
+
+    if args.mission:
+        mission_scrape()
+    else:
+        main()

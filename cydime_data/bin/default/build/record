@@ -1,0 +1,76 @@
+#! /bin/bash
+
+# use filtered data to create timeseries for records, packets, and bytes
+infile=""
+outfile=""
+dest_dir=""
+bin_dir=""
+fname=""
+map_dir=""
+temp_infile="$RANDOM.in"
+temp_outfile="$RANDOM.out"
+temp_sortfile="$RANDOM.sort"
+
+# don't clobber stuff
+set -C
+
+# do some magic to get (non-absolute) name of script for naming output
+myname=$(echo $0 | rev | cut -d/ -f1 | rev)
+
+usage() { 
+    echo >&2 "usage $myname: 
+       -i incoming_records
+       -o outgoing_records
+       -d dest_dir
+       -b bin_dir
+       -n outfile name
+       -m map_dir
+       "
+    exit 1
+}
+
+if [[ $# != 12 ]]; then
+    usage
+fi
+
+OPTIND=1
+
+while getopts ":i:o:d:b:n:m:" opt; do
+    case "$opt" in
+        i)  infile=$OPTARG
+            ;;
+        o)  outfile=$OPTARG
+            ;;
+        d)  dest_dir=$OPTARG
+            ;;
+        b)  bin_dir=$OPTARG
+            ;;
+        n)  fname=$OPTARG
+            ;;
+        m)  map_dir=$OPTARG
+            ;;
+        *)  usage
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+rwcat $infile | rwcut --fields=dIP,sIP,dval,sval,sTime,eTime \
+    --no-titles --no-column --column-separator=, --no-final-delimiter \
+    --timestamp-format=epoch,no-msec --pmap-file=$map_dir/services.pmap \
+     | grep -v "^147\.155\." > $dest_dir/$temp_infile
+#     | grep -v "^147\.155\." | grep -v "^10\." | grep -v "^192\.168" \
+#     | grep -v "^0\.0" > $dest_dir/$temp_infile
+
+rwcat $outfile | rwcut --fields=sIP,dIP,sval,dval,sTime,eTime \
+    --no-titles --no-column --column-separator=, --no-final-delimiter \
+    --timestamp-format=epoch,no-msec --pmap-file=$map_dir/services.pmap \
+     | grep -v "^147\.155\." > $dest_dir/$temp_outfile
+#     | grep -v "^147\.155\." | grep -v "^10\." | grep -v "^192\.168" \
+#     | grep -v "^0\.0" > $dest_dir/$temp_outfile
+
+cat $dest_dir/$temp_infile > $dest_dir/$temp_sortfile
+cat $dest_dir/$temp_outfile >> $dest_dir/$temp_sortfile
+cat $dest_dir/$temp_sortfile | sort -k 5,5 -nt ',' > $dest_dir/$fname
+# remove temporary building files
+rm $dest_dir/$temp_infile $dest_dir/$temp_outfile $dest_dir/$temp_sortfile

@@ -1,0 +1,71 @@
+#! /bin/bash
+
+# use filtered data to create timeseries for records, packets, and bytes
+infile=""
+outfile=""
+dest_dir=""
+bin_dir=""
+fname=""
+map_dir=""
+temp_infile="$RANDOM.in"
+temp_outfile="$RANDOM.out"
+
+# don't clobber stuff
+set -C
+
+# do some magic to get (non-absolute) name of script for naming output
+myname=$(echo $0 | rev | cut -d/ -f1 | rev)
+
+usage() { 
+    echo >&2 "usage $myname: 
+       -i incoming_records
+       -o outgoing_records
+       -d dest_dir
+       -b bin_dir
+       -n outfile name
+       -m map_dir
+       "
+    exit 1
+}
+
+if [[ $# != 12 ]]; then
+    usage
+fi
+
+OPTIND=1
+
+while getopts ":i:o:d:b:n:m:" opt; do
+    case "$opt" in
+        i)  infile=$OPTARG
+            ;;
+        o)  outfile=$OPTARG
+            ;;
+        d)  dest_dir=$OPTARG
+            ;;
+        b)  bin_dir=$OPTARG
+            ;;
+        n)  fname=$OPTARG
+            ;;
+        m)  map_dir=$OPTARG
+            ;;
+        *)  usage
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+rwcat $infile | rwuniq --pmap-file=$map_dir/services.pmap \
+    --fields=dIP,sval,dval --values=Records,Packets,Bytes \
+    --sort-output --no-column --column-separator=, \
+    --no-final-delimiter > $dest_dir/$temp_infile
+
+rwcat $outfile | rwuniq --pmap-file=$map_dir/services.pmap \
+    --fields=sIP,sval,dval --values=Records,Packets,Bytes \
+    --sort-output --no-column --column-separator=, \
+    --no-final-delimiter > $dest_dir/$temp_outfile
+
+# merge features with python script
+$bin_dir/default/merge/services_merge.py $dest_dir/$temp_infile \
+    $dest_dir/$temp_outfile $dest_dir $fname
+# remove temporary building files
+rm $dest_dir/$temp_infile $dest_dir/$temp_outfile
