@@ -9,6 +9,7 @@ import sys
 from datetime import date, timedelta
 from multiprocessing import Pool, cpu_count
 from subprocess import Popen, PIPE
+from shutil import copyfile
 
 from sqlalchemy import select, delete, join, bindparam
 
@@ -377,12 +378,12 @@ def web_scrape():
         p = Popen(cmd, stdin=PIPE, stdout=PIPE, shell=True)
         p.communicate()
 
-    do_cmd('{0} -cp {1}/CydimeCrawler.jar:. gov.ameslab.cydime.crawl.WebCrawlerWrapper'.format(Conf.java_path, Config.bin_dir))
-    do_cmd('{0} -cp {1}/CydimeCrawler.jar:. gov.ameslab.cydime.convert.MergeToText {2} {3}'.format(Conf.java_path, Config.bin_dir, Conf.crawler_web_output, Conf.crawler_web_merged))
+    do_cmd('{0} -cp {1}/CydimeCrawler.jar:/etc/cydime gov.ameslab.cydime.crawl.WebCrawlerWrapper'.format(Conf.java_path, Config.bin_dir))
+    do_cmd('{0} -cp {1}/CydimeCrawler.jar:/etc/cydime gov.ameslab.cydime.convert.MergeToText {2} {3}'.format(Conf.java_path, Config.bin_dir, Conf.crawler_web_output, Conf.crawler_web_merged))
     do_cmd('/bin/cp {0}/* {1}'.format(Conf.crawler_mission_merged, Conf.crawler_web_merged))
     do_cmd('{0}/bin/mallet import-dir --remove-stopwords --extra-stopwords {1}/stoplists/all.txt --input {2} --output {3}/web.mallet'.format(Conf.mallet_path, Conf.mallet_path, Conf.crawler_web_merged, Conf.dst_dir))
-    do_cmd('{0} -cp {1}/CydimeCrawler.jar:. gov.ameslab.cydime.convert.MapDomDoc'.format(Conf.java_path, Config.bin_dir))
-    do_cmd('{0} -cp {1}/CydimeCrawler.jar:. gov.ameslab.cydime.convert.MalletToDistance'.format(Conf.java_path, Config.bin_dir))
+    do_cmd('{0} -cp {1}/CydimeCrawler.jar:/etc/cydime gov.ameslab.cydime.convert.MapDomDoc'.format(Conf.java_path, Config.bin_dir))
+    do_cmd('{0} -cp {1}/CydimeCrawler.jar:/etc/cydime gov.ameslab.cydime.convert.MalletToDistance'.format(Conf.java_path, Config.bin_dir))
 
 def do_lookups(ip_list, seen_expired, today):
     '''Do host lookups, whois lookups, and web scraping.
@@ -419,7 +420,7 @@ def merge_web_info():
 
     s = select([scraper_table.c.host])
     res = conn.execute(s)
-    hosts = set(x[0].split(',')[1] for x in res)
+    hosts = set(str(x[0].split(',')[1]) for x in res)
     conn.close()
 
     # merge DomDocsMap.csv
@@ -440,6 +441,8 @@ def merge_web_info():
                 f.write(key + ',' + domDocs[key] + '\n')
                 docs.add(domDocs[key])
 
+    copyfile(Conf.crawler_dom_doc, Conf.label_dom_doc)
+
     # merge missionSims.csv
     missionSims = readCSV(Conf.lexical_mission_sim)
     newMissionSims = readCSV(Conf.crawler_mission_sim)
@@ -453,9 +456,11 @@ def merge_web_info():
             if key in docs:
                 f.write(key + ',' + missionSims[key] + '\n')
 
+    copyfile(Conf.crawler_mission_sim, Conf.lexical_mission_sim)
+
     # delete retired docs
     for f in os.listdir(Conf.crawler_web_merged):
-        p = os.join(Conf.crawler_web_merged, f)
+        p = os.path.join(Conf.crawler_web_merged, f)
         if os.path.isfile(p) and f not in docs:
             os.remove(p)
 
@@ -562,6 +567,8 @@ def write_final_files(today):
         for row in res:
             f.write('{0}\n'.format(row[1]))
 
+    copyfile(Conf.crawler_ip_dom, Conf.label_ip_dom)
+
     s = select([scraper_table.c.ip_addr, scraper_table.c.whois]).where(scraper_table.c.whois != None)
     res = conn.execute(s)
     with open(Conf.crawler_ip_whois, 'w') as f:
@@ -569,8 +576,11 @@ def write_final_files(today):
             f.write('{0}\n'.format(row[1]))
     conn.close()
 
+    copyfile(Conf.crawler_ip_whois, Conf.label_ip_whois)
+
 def main():
-    today = datetime.date.today() - timedelta(1)
+    #today = datetime.date.today() - timedelta(1)
+    today = datetime.date.today()
 
     yd = get_yesterdays_ips(today)
     seen_expired, unseen = join_delete(yd, today)
@@ -587,8 +597,8 @@ def mission_scrape():
         p = Popen(cmd, stdin=PIPE, stdout=PIPE, shell=True)
         p.communicate()
 
-    do_cmd('{0} -cp {1}/CydimeCrawler.jar:. gov.ameslab.cydime.crawl.WebCrawlerWrapper -mission'.format(Conf.java_path, Config.bin_dir))
-    do_cmd('{0} -cp {1}/CydimeCrawler.jar:. gov.ameslab.cydime.convert.MergeToText {2} {3}'.format(Conf.java_path, Config.bin_dir, Conf.crawler_mission_output, Conf.crawler_mission_merged))
+    do_cmd('{0} -cp {1}/CydimeCrawler.jar:/etc/cydime gov.ameslab.cydime.crawl.WebCrawlerWrapper -mission'.format(Conf.java_path, Config.bin_dir))
+    do_cmd('{0} -cp {1}/CydimeCrawler.jar:/etc/cydime gov.ameslab.cydime.convert.MergeToText {2} {3}'.format(Conf.java_path, Config.bin_dir, Conf.crawler_mission_output, Conf.crawler_mission_merged))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

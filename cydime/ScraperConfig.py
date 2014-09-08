@@ -45,8 +45,8 @@ REQUIRED = {
     'lexical.mission.sim':      'ModelOptions',
     'crawler.dom_doc':          'CrawlerOptions',
     'crawler.mission.sim':      'CrawlerOptions',
-    'java_path':                'CrawlerOptions',
-    'mallet_path':              'CrawlerOptions',
+    'java_path':                'ScraperOptions',
+    'mallet_path':              'ScraperOptions',
     'crawler.mission.output':   'CrawlerOptions',
 }
 
