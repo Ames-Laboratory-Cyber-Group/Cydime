@@ -1,0 +1,11 @@
+# calculated over a single day's traffic
+# each line holds aggregated values over hourly bin
+
+IP,sval,dval,stime,records,packets,bytes
+IP: IP address
+sval: incoming top service (by volume)
+dval: outgoing top service (by volume)
+stime: hourly bin
+records: total records
+packets: total packets
+bytes: total bytes

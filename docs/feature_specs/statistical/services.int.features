@@ -1,0 +1,10 @@
+# calculated over a single day's incoming traffic
+# each line has the following aggregated values
+
+IP,INproto/service,OUTproto/service,Records,Packets,Bytes
+IP: IP address
+INproto/service: top (by volume) incoming protocol/service
+OUTproto/service: top (by volume) outgoing protocol/service
+Records: total records
+Packets: total packets
+Bytes: total bytes

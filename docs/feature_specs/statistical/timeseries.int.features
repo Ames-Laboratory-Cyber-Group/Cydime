@@ -1,0 +1,9 @@
+# calculated over a single day's incoming traffic
+# each line holds aggregated values for each hourly bin
+
+IP,Time,Records,Packets,Bytes
+IP: IP address
+Time: hourly bin
+Records: total records
+Packets: total packets
+Bytes: total bytes

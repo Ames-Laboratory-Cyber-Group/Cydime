@@ -1,0 +1,15 @@
+# calculated over all outgoing traffic in the filter interval
+# each line has the following format (values are aggregated per IP address)
+
+IP,src_cc,dst_cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port
+IP: IP address
+src_cc: source country code
+dst_cc: destination country code
+total_records: total number of records
+total_bytes: total number of bytes
+earliest_starttime: earliest record
+latest_endtime: latest record
+total_peercount: total internal peers
+total_localport: total local ports
+total_remoteport: total remote ports
+ratio_local_remote_port: ratio of local ports to remote ports

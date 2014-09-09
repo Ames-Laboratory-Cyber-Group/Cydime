@@ -1,0 +1,11 @@
+# calculated over a single day's traffic
+# each line has values for every unique internal/external resource pair
+
+intIP,extIP,INproto/service,OUTproto/service,Records,Packets,Bytes
+intIP: internal IP address
+extIP: external IP address
+INproto/service: top (by volume) incoming protocol and service
+OUTproto/service: top (by volume) outgoing protocol and service
+Records: total records
+Packets: total packets
+Bytes: total bytes
