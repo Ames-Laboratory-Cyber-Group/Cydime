@@ -1,13 +1,13 @@
 # calculated over a single day's traffic
 # each line has the aggregated values for every unique internal/external
-# resource pair for each hourly bin
+# resource pair for each (currently 4 hour) bin
 
 intIP,extIP,INproto/service,OUTproto/service,time,Records,Packets,Bytes
 intIP: internal IP address
 extIP: external IP address
-INproto/service: top (by volume) protocol and service
-OUTproto/service: top (by volume) protocol and service
-time: timestamp
+INproto/service: protocol and service
+OUTproto/service: protocol and service
+time: timestamp of bin start time
 Records: total records
 Packets: total packets
 Bytes: total bytes

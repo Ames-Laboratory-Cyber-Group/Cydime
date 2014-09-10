@@ -3,7 +3,7 @@
 
 IP,Time,Records,Packets,Bytes
 IP: IP address
-Time: hourly bin
+Time: timestamp of bin start time
 Records: total records
 Packets: total packets
 Bytes: total bytes

@@ -376,7 +376,7 @@ def web_scrape():
     '''
     def do_cmd(cmd):
         p = Popen(cmd, stdin=PIPE, stdout=PIPE, shell=True)
-        p.communicate()
+        out, err = p.communicate()
 
     do_cmd('{0} -cp {1}/CydimeCrawler.jar:/etc/cydime gov.ameslab.cydime.crawl.WebCrawlerWrapper'.format(Conf.java_path, Config.bin_dir))
     do_cmd('{0} -cp {1}/CydimeCrawler.jar:/etc/cydime gov.ameslab.cydime.convert.MergeToText {2} {3}'.format(Conf.java_path, Config.bin_dir, Conf.crawler_web_output, Conf.crawler_web_merged))

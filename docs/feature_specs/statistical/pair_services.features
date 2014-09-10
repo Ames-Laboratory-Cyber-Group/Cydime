@@ -4,8 +4,8 @@
 intIP,extIP,INproto/service,OUTproto/service,Records,Packets,Bytes
 intIP: internal IP address
 extIP: external IP address
-INproto/service: top (by volume) incoming protocol and service
-OUTproto/service: top (by volume) outgoing protocol and service
+INproto/service: incoming protocol and service
+OUTproto/service: outgoing protocol and service
 Records: total records
 Packets: total packets
 Bytes: total bytes
