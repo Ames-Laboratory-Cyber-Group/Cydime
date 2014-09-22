@@ -39,7 +39,9 @@
 
 package gov.ameslab.cydime.predictor;
 
+import static gov.ameslab.cydime.preprocess.WekaPreprocess.UnsupervisedFilter.Normalize;
 import gov.ameslab.cydime.model.InstanceDatabase;
+import gov.ameslab.cydime.predictor.featurerank.FeatureRanker;
 import gov.ameslab.cydime.preprocess.WekaPreprocess;
 import gov.ameslab.cydime.util.ARFFWriter;
 import gov.ameslab.cydime.util.CUtil;
@@ -101,27 +103,56 @@ public class CydimePredictor {
 	
 	private void run() throws Exception {
 		InstanceDatabase baseNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
-		InstanceDatabase hierarchy = InstanceDatabase.load(Config.INSTANCE.getCurrentPreprocessPath() + Config.INSTANCE.getHierarchy());
-		InstanceDatabase hierarchyCV = stack("hierarchy_stack", hierarchy, ClassifierFactory.makeREPTreeAVT());
-		InstanceDatabase all = InstanceDatabase.mergeFeatures(Config.INSTANCE.getStackPath(),
-				hierarchyCV,
-				baseNorm
-				);
-		all.saveIPs();
-		all.write();
-		all.writeReport();
-		
-		InstanceDatabase baseScore = learnAndPredict(ClassifierFactory.makeREPTree(), all, Config.INSTANCE.getBaseScorePath());
-		
-		//Report
-		InstanceDatabase baseNormCV = stack("baseNorm_stack", baseNorm, ClassifierFactory.makeREPTree());
-		InstanceDatabase predicted = InstanceDatabase.mergeFeatures(Config.INSTANCE.getAllPredictedPath(),
-				hierarchyCV,
-				baseNormCV);
-		predicted.writeReport();
+		InstanceDatabase baseScore = null;
+		if (baseNorm.getTrainIPs().size() < Config.INSTANCE.getInt(Config.MISSION_SIM_THRESHOLD)) {
+			Log.log(Level.INFO, "Available lexical mission similarity scores " + baseNorm.getTrainIPs().size() + " is under required threshold: " + Config.INSTANCE.getInt(Config.MISSION_SIM_THRESHOLD)
+					+ " -- using feature ranker instead.");
+			
+			baseScore = predictRank(baseNorm);
+		} else {
+			InstanceDatabase hierarchy = InstanceDatabase.load(Config.INSTANCE.getCurrentPreprocessPath() + Config.INSTANCE.getHierarchy());
+			InstanceDatabase hierarchyCV = stack("hierarchy_stack", hierarchy, ClassifierFactory.makeREPTreeAVT());
+			InstanceDatabase all = InstanceDatabase.mergeFeatures(Config.INSTANCE.getStackPath(),
+					hierarchyCV,
+					baseNorm
+					);
+			all.saveIPs();
+			all.write();
+			all.writeReport();
+			
+			baseScore = learnAndPredict(ClassifierFactory.makeREPTree(), all, Config.INSTANCE.getBaseScorePath());
+			
+			//Report
+			InstanceDatabase baseNormCV = stack("baseNorm_stack", baseNorm, ClassifierFactory.makeREPTree());
+			InstanceDatabase predicted = InstanceDatabase.mergeFeatures(Config.INSTANCE.getAllPredictedPath(),
+					hierarchyCV,
+					baseNormCV);
+			predicted.writeReport();			
+		}
 		
 		//Final result
 		writeFinalResult(baseNorm, baseScore);
+	}
+
+	private InstanceDatabase predictRank(InstanceDatabase base) throws IOException {
+		FeatureRanker fr = new FeatureRanker(Config.INSTANCE.getString(Config.FEATURE_LABEL_FILE));
+		fr.buildClassifier(base.getWekaInstances());
+		
+		ARFFWriter out = new ARFFWriter(Config.INSTANCE.getRankScorePath() + WekaPreprocess.ALL_SUFFIX, "rank_score", null,
+				"rank_score numeric"
+				); 
+		for (String ip : base.getIPs()) {
+			Instance inst = base.getWekaInstance(ip);
+			double rank_score = fr.classifyInstance(inst);
+			out.writeValues(String.valueOf(rank_score), "?");
+		}
+		out.close();
+		
+		WekaPreprocess.filterUnsuperivsed(Config.INSTANCE.getRankScorePath() + WekaPreprocess.ALL_SUFFIX,
+				Normalize);
+		FileUtil.copy(Config.INSTANCE.getRankScorePath() + WekaPreprocess.ALL_SUFFIX, Config.INSTANCE.getRankScorePath() + WekaPreprocess.REPORT_SUFFIX);
+		
+		return new InstanceDatabase(Config.INSTANCE.getRankScorePath(), base.getIPs());
 	}
 
 	private InstanceDatabase stack(String name, InstanceDatabase base, AbstractClassifier c) throws Exception {

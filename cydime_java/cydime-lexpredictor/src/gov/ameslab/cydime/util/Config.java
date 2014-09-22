@@ -73,12 +73,15 @@ public class Config {
 	public static final String PREPROCESS_DIR = "preprocess.dir";
 	public static final String MODEL_DIR = "model.dir";
 	public static final String REPORT_DIR = "report.dir";
+	public static final String FEATURE_LABEL_FILE = "label.feature";
 	public static final String LEXICAL_MISSION_SIM_FILE = "lexical.mission.sim";
+	public static final String MISSION_SIM_THRESHOLD = "lexical.mission.threhold";
 	public static final String IP_DOM_FILE = "label.ip_dom";
 	public static final String IP_WHOIS_FILE = "label.ip_whois";
 	public static final String DOM_DOC_FILE = "label.dom_doc";
 	
 	public static final Config INSTANCE;
+
 	
 	static {
 		try {
@@ -256,6 +259,7 @@ public class Config {
 	public String getBaseNormPath() {	return getCurrentModelPath() + "base.ext.norm";	}
 	public String getBaseScorePath() {	return getCurrentModelPath() + "base_score";	}
 	public String getStackPath() {	return getCurrentModelPath() + "stack.ext";	}
+	public String getRankScorePath() {	return getCurrentModelPath() + "rank_score";	}
 	
 	//getReportPath
 	public String getIntBasePath() {	return getCurrentReportPath() + "base.int";	}
@@ -267,5 +271,5 @@ public class Config {
 	public String getAllPredictedPath() {	return getCurrentReportPath() + "predicted";	}
 	
 	public String getSilkServicePath() {	return getPath(SILK_SERVICE_DIR) + "services.txt";	}
-	
+
 }
