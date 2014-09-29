@@ -42,6 +42,9 @@ package gov.ameslab.cydime.util.views;
 import javax.swing.JTree;
 import javax.swing.tree.TreePath;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class TreePathNavigator {
 
 	private JTree mTree;

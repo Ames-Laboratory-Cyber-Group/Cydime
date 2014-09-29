@@ -53,8 +53,8 @@ import java.util.RandomAccess;
  * Modified version of ArrayList
  * Changed clear() so that it does not set elementData to null for GC, to save time.
  * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
  */
-
 public class LazyGCArrayList<E> extends AbstractList<E>
         implements List<E>, RandomAccess, Cloneable, java.io.Serializable
 {

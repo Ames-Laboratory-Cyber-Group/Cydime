@@ -44,6 +44,9 @@ import java.util.Set;
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class NetUtil {
 
 	public static boolean isIPv4(String line) {

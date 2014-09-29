@@ -62,8 +62,10 @@ import java.util.TreeMap;
 import javax.swing.tree.DefaultTreeModel;
 
 /**
+ * MVC Model for the scatter plot.
+ * Holds a nested Map for fast retrieval of records for the tree filters.
  *
- * @author htlin
+ * @author Harris Lin (harris.lin.nz at gmail.com)
  */
 public class PlotData {
 

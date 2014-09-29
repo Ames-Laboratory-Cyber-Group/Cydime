@@ -41,6 +41,11 @@ package gov.ameslab.cydime.predictor.featurerank;
 
 import weka.core.Instance;
 
+/**
+ * A simple FeatureClassifier for numeric attributes.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class NumericFeatureClassifier implements FeatureClassifier {
 
 	private static final long serialVersionUID = -14508032854796402L;

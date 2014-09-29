@@ -63,6 +63,11 @@ import weka.filters.unsupervised.attribute.Normalize;
 import weka.filters.unsupervised.attribute.ReplaceMissingValues;
 import weka.filters.unsupervised.attribute.StringToNominal;
 
+/**
+ * A Weka helper for common I/O, feature merging, filtering, and instances concatenation.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class WekaPreprocess {
 
 	public static final String IP_SUFFIX = ".ip";

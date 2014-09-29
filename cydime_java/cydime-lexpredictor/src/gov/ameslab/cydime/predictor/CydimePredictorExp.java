@@ -40,7 +40,6 @@
 package gov.ameslab.cydime.predictor;
 
 import gov.ameslab.cydime.model.InstanceDatabase;
-import gov.ameslab.cydime.predictor.propagation.BiPropagation;
 import gov.ameslab.cydime.preprocess.WekaPreprocess;
 import gov.ameslab.cydime.util.ARFFWriter;
 import gov.ameslab.cydime.util.CUtil;
@@ -49,7 +48,6 @@ import gov.ameslab.cydime.util.FileUtil;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.Collections;
 import java.util.List;
@@ -63,6 +61,11 @@ import weka.classifiers.Evaluation;
 import weka.core.Instance;
 import weka.core.Instances;
 
+/**
+ * Cydime Predictor experimenter using a set of representative predictors.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class CydimePredictorExp {
 
 	private static final Logger Log = Logger.getLogger(CydimePredictorExp.class.getName());
@@ -70,7 +73,7 @@ public class CydimePredictorExp {
 	public static final String MODEL_FILE = ".model";
 	public static final String EVALUATION_FILE = ".result";
 
-	private enum Algorithm { STRENGTH, HIERARCHY, HYBRID, PROPAGATION }
+	private enum Algorithm { STRENGTH, HIERARCHY, HYBRID }
 
 	private Algorithm mAlgorithmSet;
 	private AbstractClassifier[] mAlgorithms = new AbstractClassifier[] {
@@ -98,9 +101,9 @@ public class CydimePredictorExp {
 	}
 
 	private static void printUsage() {
-		System.out.println("java -jar ORCPredictor FEATURE_DIR ALGO_SET ALGO LABEL_PERCENT SEED");
+		System.out.println("[java] CydimePredictorExp FEATURE_DIR ALGO_SET ALGO LABEL_PERCENT SEED");
 		System.out.println("    FEATURE_DIR: date path specifying feature files");
-		System.out.println("    ALGO_SET: [strength|hierarchy|hybrid|prop]");
+		System.out.println("    ALGO_SET: [strength|hierarchy|hybrid]");
 		System.out.println("    ALGO: [0|1|2|3|4]");
 		System.out.println("          0 - LinearRegression");
 		System.out.println("          1 - REPTree");
@@ -121,8 +124,6 @@ public class CydimePredictorExp {
 			mAlgorithmSet = Algorithm.HIERARCHY;
 		} else if (args[1].equalsIgnoreCase("hybrid")) {
 			mAlgorithmSet = Algorithm.HYBRID;
-		} else if (args[1].equalsIgnoreCase("prop")) {
-			mAlgorithmSet = Algorithm.PROPAGATION;
 		}
 
 		mAlgorithm = Integer.parseInt(args[2]);
@@ -171,9 +172,6 @@ public class CydimePredictorExp {
 			preds = runHybrid(baseNorm, hierarchy);
 			break;
 			
-		case PROPAGATION:
-			preds = runProp(baseNorm);
-			break;
 		}
 		
 		writeEvaluation(baseNorm, labels, preds);
@@ -236,19 +234,6 @@ public class CydimePredictorExp {
 		}
 		
 		return pred;
-	}
-
-	private Map<String, Double> runProp(InstanceDatabase baseNorm) throws IOException {
-		List<String> trainIPs = baseNorm.getTrainIPs();
-		List<String> testIPs = baseNorm.getTestIPs();
-		Map<String, Double> trainLabels = CUtil.makeMap();
-		for (String ip : trainIPs) {
-			double label = baseNorm.getLabel(ip);
-			trainLabels.put(ip, label);
-		}
-		
-		BiPropagation prop = new BiPropagation(trainIPs, testIPs, trainLabels, Config.INSTANCE.getPairService(), Config.INSTANCE.getPairService());
-		return prop.run();
 	}
 
 	private InstanceDatabase stack(String name, InstanceDatabase base, AbstractClassifier c) throws Exception {

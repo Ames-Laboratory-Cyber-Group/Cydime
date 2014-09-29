@@ -42,6 +42,9 @@ package gov.ameslab.cydime.util;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class FastListSet<T> {
 	
 	private Set<T> mSet;

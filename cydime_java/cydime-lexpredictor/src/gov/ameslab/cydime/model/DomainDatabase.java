@@ -52,6 +52,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+/**
+ * A facade for all hierarchical feature database.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class DomainDatabase {
 	
 	public static final String NA = "na";

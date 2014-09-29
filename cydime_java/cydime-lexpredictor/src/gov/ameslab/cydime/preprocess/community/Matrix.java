@@ -46,6 +46,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+/**
+ * A matrix implementation for storing bipartite graphs.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class Matrix<T> {
 
 	private int mISize;

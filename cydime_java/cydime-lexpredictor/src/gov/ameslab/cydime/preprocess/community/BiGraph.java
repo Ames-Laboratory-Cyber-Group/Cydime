@@ -54,6 +54,11 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Reads netflow data and converts into a bipartite graph of external/internal communications.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class BiGraph extends FeatureSet {
 	
 	private static final Logger Log = Logger.getLogger(BiGraph.class.getName());

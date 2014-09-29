@@ -62,6 +62,21 @@ import weka.core.DenseInstance;
 import weka.core.Instance;
 import weka.core.Instances;
 
+/**
+ * For each external resource, we construct summary statistics over the specified time window:
+ * 
+ * (a) The total number of associated flow records.
+ * (b) The total number of bytes transferred to or from any internal resource.
+ * (c) The earliest time in the fixed window such that traffic associated with this resource was observed.
+ * (d) The latest time in the fixed window such that traffic associated with this resource was observed.
+ * (e) The total number of distinct destination ports associated with this resource.
+ * (f) The total number of distinct source ports associated with this resource.
+ * (g) Ratio of (e)/(f)
+ * (h) The total number of unique internal resources that communicated with this resource.
+ * (i) Country code of the external resource.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class Netflow extends FeatureSet {
 	
 	private static final Logger Log = Logger.getLogger(Netflow.class.getName());

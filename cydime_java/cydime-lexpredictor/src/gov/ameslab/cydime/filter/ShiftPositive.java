@@ -51,11 +51,11 @@ import weka.core.Instance;
 import weka.core.Instances;
 import weka.filters.SimpleBatchFilter;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class ShiftPositive extends SimpleBatchFilter {
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 707831870765519785L;
 
 	private Map<Integer, Double> mMinima;

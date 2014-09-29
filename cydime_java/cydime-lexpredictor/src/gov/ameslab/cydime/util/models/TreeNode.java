@@ -41,6 +41,9 @@ package gov.ameslab.cydime.util.models;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class TreeNode extends DefaultMutableTreeNode {
 
 	private static final long serialVersionUID = -8034924700161537443L;

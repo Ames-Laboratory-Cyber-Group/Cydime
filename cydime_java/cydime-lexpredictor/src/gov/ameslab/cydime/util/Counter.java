@@ -41,6 +41,9 @@ package gov.ameslab.cydime.util;
 
 import java.util.Map;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class Counter<T> {
 
 	private int mDigitSize;

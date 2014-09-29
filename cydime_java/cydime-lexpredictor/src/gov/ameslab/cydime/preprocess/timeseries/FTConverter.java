@@ -51,7 +51,11 @@ import org.apache.commons.math3.transform.DftNormalization;
 import org.apache.commons.math3.transform.FastFourierTransformer;
 import org.apache.commons.math3.transform.TransformType;
 
-
+/**
+ * Fourier transform using Apache Math's FastFourierTransformer.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class FTConverter implements Converter {
 
 	private static final String NAME = "Fourier";

@@ -54,6 +54,11 @@ import weka.core.Attribute;
 import weka.core.Instance;
 import weka.core.Instances;
 
+/**
+ * Ranks an instance by assigning a score [0.0, 1.0] using a list of FeatureClassifiers.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class FeatureRanker implements Serializable {
 	
 	private static final Logger Log = Logger.getLogger(FeatureRanker.class.getName());

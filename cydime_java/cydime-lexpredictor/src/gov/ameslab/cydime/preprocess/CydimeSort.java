@@ -52,6 +52,12 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Sorts the time series and service feature files so that records with the same IP
+ * are grouped together (and also in increasing timestamps).
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class CydimeSort {
 
 	private static final Logger Log = Logger.getLogger(CydimeSort.class.getName());

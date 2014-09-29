@@ -4,6 +4,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class Percentile {
 
 	private class Index implements Comparable<Index> {

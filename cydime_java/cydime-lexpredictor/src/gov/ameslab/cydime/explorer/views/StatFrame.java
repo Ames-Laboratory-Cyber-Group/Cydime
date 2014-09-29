@@ -64,8 +64,9 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 
 /**
+ * MVC View for the summary statistics tables.
  *
- * @author htlin
+ * @author Harris Lin (harris.lin.nz at gmail.com)
  */
 public class StatFrame extends javax.swing.JFrame {
     

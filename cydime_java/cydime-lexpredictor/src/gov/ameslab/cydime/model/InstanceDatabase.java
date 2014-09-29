@@ -57,6 +57,12 @@ import java.util.logging.Logger;
 import weka.core.Instance;
 import weka.core.Instances;
 
+/**
+ * A wrapper for Weka's Instances that maintains the IP (as key) for each Instance.
+ * Also manages "report" Instances where the values are usually in their raw form (before normalization) for displaying.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class InstanceDatabase {
 
 	private static final Logger Log = Logger.getLogger(InstanceDatabase.class.getName());

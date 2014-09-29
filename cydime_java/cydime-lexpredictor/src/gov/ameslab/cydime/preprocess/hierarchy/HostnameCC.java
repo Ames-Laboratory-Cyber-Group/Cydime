@@ -17,6 +17,12 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Hostname hierarchy and country code hierarchy (with cc_hierarchy.csv adapted from
+ * the GeoNames geographical database: http://www.geonames.org/countries/).
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class HostnameCC extends FeatureSet {
 
 	private static final Logger Log = Logger.getLogger(HostnameCC.class.getName());

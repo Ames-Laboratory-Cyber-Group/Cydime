@@ -58,8 +58,16 @@ import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 
 /**
+ * Cydime Resource Explorer: an interactive zoomable scatter plot with detailed summary statistics table for
+ * external and internal IPs.
+ * Designed with MVC pattern:
+ * - Controller: this class
+ * - Plot model: PlotData
+ * - Statistics model: StatData
+ * - Plot view: PlotFrame
+ * - Statistics view: StatFrame
  *
- * @author htlin
+ * @author Harris Lin (harris.lin.nz at gmail.com)
  */
 public class CydimeExplorer {
     

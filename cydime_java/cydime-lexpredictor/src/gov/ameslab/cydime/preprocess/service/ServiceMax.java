@@ -59,6 +59,11 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * (see DailyProfile)
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class ServiceMax extends FeatureSet {
 	
 	private static final Logger Log = Logger.getLogger(ServiceMax.class.getName());

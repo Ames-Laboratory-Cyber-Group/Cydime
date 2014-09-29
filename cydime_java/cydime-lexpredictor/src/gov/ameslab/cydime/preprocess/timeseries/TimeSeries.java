@@ -63,6 +63,13 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * We extract the number of bytes transferred for each hourly bin for each IP, and treat it as a sequence
+ * of time series data. We then perform Discrete Fourier Transform on this time series and obtain the
+ * coefficients of the corresponding daily frequency and weekly frequency.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class TimeSeries extends FeatureSet {
 	
 	private static class EpochConverter {

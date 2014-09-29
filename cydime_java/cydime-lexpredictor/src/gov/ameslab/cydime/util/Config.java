@@ -59,7 +59,9 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 
-
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class Config {
 
 	private static final Logger Log = Logger.getLogger(Config.class.getName());

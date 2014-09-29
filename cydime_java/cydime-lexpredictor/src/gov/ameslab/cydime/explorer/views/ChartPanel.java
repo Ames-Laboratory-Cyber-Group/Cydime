@@ -125,6 +125,8 @@ import org.jfree.io.SerialUtilities;
  * The panel registers with the chart to receive notification of changes to any
  * component of the chart.  The chart is redrawn automatically whenever this
  * notification is received.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
  */
 public class ChartPanel extends org.jfree.chart.ChartPanel {
 

@@ -43,6 +43,9 @@ import java.text.DecimalFormat;
 
 import javax.swing.table.DefaultTableCellRenderer;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class PercentageCellRenderer extends DefaultTableCellRenderer {
 
 	private static final long serialVersionUID = 2979270401164040088L;

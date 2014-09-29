@@ -43,6 +43,11 @@ import java.io.Serializable;
 
 import weka.core.Instance;
 
+/**
+ * A simple classifier interface defined over a single feature.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public interface FeatureClassifier extends Serializable {
 
 	void scan(Instance inst);

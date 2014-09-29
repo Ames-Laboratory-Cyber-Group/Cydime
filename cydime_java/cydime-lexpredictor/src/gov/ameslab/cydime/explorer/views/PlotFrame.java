@@ -57,8 +57,9 @@ import gov.ameslab.cydime.util.CUtil;
 import gov.ameslab.cydime.util.models.TreeNode;
 
 /**
+ * MVC View for the zoomable scatter plot with three selection trees for filtering (Service, Hostname hierarchy, and Whois hierarchy).
  *
- * @author htlin
+ * @author Harris Lin (harris.lin.nz at gmail.com)
  */
 public class PlotFrame extends javax.swing.JFrame implements SelectionListener {
 	

@@ -52,6 +52,9 @@ import weka.classifiers.meta.AdditiveRegression;
 import weka.classifiers.trees.REPTree;
 import weka.core.SelectedTag;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class ClassifierFactory {
 
 	public static AbstractClassifier makeLogistic() throws Exception {

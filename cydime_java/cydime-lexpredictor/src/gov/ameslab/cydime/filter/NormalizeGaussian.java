@@ -42,6 +42,8 @@ package gov.ameslab.cydime.filter;
 import java.io.Serializable;
 import java.util.Arrays;
 
+import org.jfree.chart.ChartPanel;
+
 import umontreal.iro.lecuyer.probdist.NormalDist;
 import weka.core.Attribute;
 import weka.core.Capabilities;
@@ -53,6 +55,9 @@ import weka.core.matrix.LinearRegression;
 import weka.core.matrix.Matrix;
 import weka.filters.SimpleBatchFilter;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class NormalizeGaussian extends SimpleBatchFilter {
 
 	private static final long serialVersionUID = -3392794845073011810L;

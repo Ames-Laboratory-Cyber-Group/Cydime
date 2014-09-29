@@ -63,6 +63,14 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/** 
+ * We extract the number of bytes transferred for each hourly bin for each IP, and treat it as a sequence
+ * of time series data. From this sequence we compute the following:
+ * (1) The number of hourly and daily bins that an IP has any activity.
+ * (2) The byte ratio of on-work traffic over off-work traffic (the work hours can be for example 8am-5pm).
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class TimeAccess extends FeatureSet {
 
 	private static final Logger Log = Logger.getLogger(TimeAccess.class.getName());

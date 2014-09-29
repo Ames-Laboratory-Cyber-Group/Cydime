@@ -48,6 +48,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.Map;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class ServiceFormatter {
 
 	private Map<String, Integer> mMap;

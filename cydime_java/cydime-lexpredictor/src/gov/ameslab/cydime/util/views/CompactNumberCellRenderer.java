@@ -41,6 +41,9 @@ package gov.ameslab.cydime.util.views;
 
 import javax.swing.table.DefaultTableCellRenderer;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class CompactNumberCellRenderer extends DefaultTableCellRenderer {
 
 	private static final long serialVersionUID = -3823616477359019984L;

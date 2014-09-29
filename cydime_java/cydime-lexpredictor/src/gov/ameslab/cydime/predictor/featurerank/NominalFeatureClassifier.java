@@ -46,6 +46,11 @@ import java.util.Map;
 
 import weka.core.Instance;
 
+/**
+ * A simple FeatureClassifier for nominal attributes.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class NominalFeatureClassifier implements FeatureClassifier {
 
 	private static final long serialVersionUID = 4956118302881213165L;

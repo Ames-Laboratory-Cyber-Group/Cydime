@@ -53,6 +53,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class CUtil {
 
 	public static final Comparator<String> STRING_AS_INT_COMPARATOR = new Comparator<String>() {

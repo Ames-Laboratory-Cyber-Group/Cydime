@@ -64,6 +64,11 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Cydime Preprocessor.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class CydimePreprocessor {
 	
 	private static final Logger Log = Logger.getLogger(CydimePreprocessor.class.getName());

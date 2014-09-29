@@ -45,6 +45,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class ARFFWriter {
 
 	private BufferedWriter mOut;

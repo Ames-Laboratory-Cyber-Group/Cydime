@@ -43,6 +43,11 @@ import gov.ameslab.cydime.util.CUtil;
 
 import java.util.Set;
 
+/**
+ * Maps the protocol/port of a traffic with a set of common services.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class ServiceParser {
 
 	public static final String SERVICE_ICMP = "icmp";

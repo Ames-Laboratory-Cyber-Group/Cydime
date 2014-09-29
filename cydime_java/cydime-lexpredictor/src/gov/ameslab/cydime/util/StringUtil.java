@@ -39,6 +39,9 @@
 
 package gov.ameslab.cydime.util;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class StringUtil {
 
 	public static String[] trimmedSplit(String s, String del) {

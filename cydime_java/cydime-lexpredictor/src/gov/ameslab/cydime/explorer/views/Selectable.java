@@ -49,6 +49,8 @@ import org.jfree.chart.plot.PlotRenderingInfo;
 /**
  * A plot that is selectable must implement this interface to provide a
  * mechanism for the {@link ChartPanel} to control the selecting.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
  */
 public interface Selectable {
 

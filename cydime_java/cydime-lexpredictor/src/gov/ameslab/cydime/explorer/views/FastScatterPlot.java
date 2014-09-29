@@ -92,7 +92,9 @@ import org.jfree.util.ObjectUtilities;
 import org.jfree.util.PaintUtilities;
 
 /**
- * A fast scatter plot.
+ * A fast scatter plot, augmented with selection and zooming operations.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
  */
 public class FastScatterPlot extends Plot implements ValueAxisPlot, Pannable,
         Zoomable, Selectable, Cloneable, Serializable {

@@ -60,8 +60,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 /**
- *
- * @author htlin
+ * MVC Model for summary statistics table.
+ * Holds nested maps for fast retrieval of time series data.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
  */
 public class StatData {
 

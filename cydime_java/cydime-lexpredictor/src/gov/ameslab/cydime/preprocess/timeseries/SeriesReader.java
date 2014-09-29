@@ -51,6 +51,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+/** 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class SeriesReader {
 
 	private String[] mInPaths;

@@ -45,6 +45,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class Histogram<T> {
 
 	private static final DecimalFormat FORMAT = new DecimalFormat("0.00"); 

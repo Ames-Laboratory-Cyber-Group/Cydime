@@ -65,6 +65,13 @@ import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.SerializationHelper;
 
+/**
+ * Cydime Predictor.
+ * Defaults to building an REPTreeAVT over hierarchical features, and then stack the results over
+ * remaining features to build a final REPTree.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class CydimePredictor {
 	
 	private static final Logger Log = Logger.getLogger(CydimePredictor.class.getName());
@@ -84,7 +91,7 @@ public class CydimePredictor {
 	}
 
 	private static void printUsage() {
-		System.out.println("java -jar ORCPredictor FEATURE_DIR");
+		System.out.println("[java] CydimePredictor FEATURE_DIR");
 		System.out.println("    FEATURE_DIR: date path specifying feature files");
 	}
 	

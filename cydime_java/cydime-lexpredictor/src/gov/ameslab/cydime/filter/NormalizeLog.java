@@ -47,6 +47,9 @@ import weka.core.Instance;
 import weka.core.Instances;
 import weka.filters.SimpleBatchFilter;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class NormalizeLog extends SimpleBatchFilter {
 
 	private static final long serialVersionUID = 5081859611837078074L;

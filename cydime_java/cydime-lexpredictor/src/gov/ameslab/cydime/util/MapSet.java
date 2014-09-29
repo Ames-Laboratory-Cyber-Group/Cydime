@@ -47,6 +47,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class MapSet<K,T> {
 
 	private Map<K,Set<T>> mMapSet;

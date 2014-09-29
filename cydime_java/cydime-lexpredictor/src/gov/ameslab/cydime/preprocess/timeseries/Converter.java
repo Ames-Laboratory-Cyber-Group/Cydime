@@ -41,7 +41,11 @@ package gov.ameslab.cydime.preprocess.timeseries;
 
 import java.io.IOException;
 
-
+/**
+ * An interface for all time series converters.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public interface Converter {
 
 	String getName();

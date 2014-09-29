@@ -39,6 +39,9 @@
 
 package gov.ameslab.cydime.util;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class HashMap<K,V> extends java.util.HashMap<K,V> {
 
 	public interface ValueFactory<K,V> {

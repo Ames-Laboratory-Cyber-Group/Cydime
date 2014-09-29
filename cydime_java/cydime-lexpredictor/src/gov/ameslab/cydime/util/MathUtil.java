@@ -50,6 +50,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class MathUtil {
 	
 	public static Random Random = new Random(0);

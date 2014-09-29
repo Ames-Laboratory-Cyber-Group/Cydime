@@ -43,6 +43,11 @@ import gov.ameslab.cydime.util.Config;
 
 import java.util.List;
 
+/**
+ * Base data class for all feature preprocessing.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class FeatureSet {
 
 	protected List<String> mAllIPs;

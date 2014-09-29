@@ -52,6 +52,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+/**
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class FileUtil {
 	
 	public static void copy(String file, String newFile) throws IOException {

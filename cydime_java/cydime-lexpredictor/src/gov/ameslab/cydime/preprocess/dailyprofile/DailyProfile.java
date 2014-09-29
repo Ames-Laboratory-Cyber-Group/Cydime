@@ -23,6 +23,21 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * [Time-of-day profile]
+ * We break a day into six 4-hourly bins, and aggregate the volume for each bin for each external resource.
+ * The six bins are normalized so that they sum to 1.
+ * 
+ * [Service profile]
+ * For each external resource, we create a set of associated services and collect statistics
+ * for each service in the set. We map traffic to service type using a table of common protocol/port combinations,
+ * and if a TCP or UDP connection is observed on an unrecognized high port or a protocol other than TCP/UDP
+ * is observed, it is listed as OTHER. To adjust for magnitude difference among different services, we normalize
+ * each volume to its percentile when ordered in the entire data set. As an extra categorical feature we also
+ * select the most-used service for each external resource determined by byte volume.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class DailyProfile extends FeatureSet {
 
 	private static final Logger Log = Logger.getLogger(DailyProfile.class.getName());

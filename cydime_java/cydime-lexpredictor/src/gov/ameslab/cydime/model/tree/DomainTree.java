@@ -47,6 +47,11 @@ import java.io.PrintStream;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * A tree structure to store hostname (domain) hierarchy.
+ * 
+ * @author Harris Lin (harris.lin.nz at gmail.com)
+ */
 public class DomainTree {
 
 	private TreeNode mRoot;
