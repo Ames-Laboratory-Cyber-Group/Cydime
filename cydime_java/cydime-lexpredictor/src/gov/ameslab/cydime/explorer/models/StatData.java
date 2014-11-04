@@ -145,11 +145,14 @@ public class StatData {
 		mIntIPs = intIPs;
 		mIntIPSet = CUtil.makeSet(mIntIPs);
 		
+		Config.INSTANCE.setFeatureSet(Config.FEATURE_IP_DIR);
         loadExtTable();
-        loadIntTable();
         loadExtTimeseries();
-        loadIntTimeseries();
         loadGraph();
+        
+        Config.INSTANCE.setFeatureSet(Config.FEATURE_INT_DIR);
+        loadIntTable();
+        loadIntTimeseries();        
     }
 	
 	private void loadExtTable() throws IOException {
@@ -172,7 +175,7 @@ public class StatData {
         	String label = in.get("class");
             String serv = in.get("service");
             String domain = mDomainDB.getDomain(ip);
-            String whois = mDomainDB.getWhois(ip);
+            String asn = mDomainDB.getASN(ip);
             String semantic = in.get(2, "hierarchy_stack");
             String strength = in.get(2, "baseNorm_stack");
             
@@ -182,8 +185,8 @@ public class StatData {
             	domain = NOT_AVAILABLE;
             }
             
-            if (whois == null || whois.isEmpty()) {
-            	whois = NOT_AVAILABLE;
+            if (asn == null || asn.isEmpty()) {
+            	asn = NOT_AVAILABLE;
             }
             
             Object[] rec = new Object[] {
@@ -194,7 +197,7 @@ public class StatData {
             		(strength == null) ? null : Double.parseDouble(strength),
             		serv, //service
             		domain, //domain
-            		whois, //whois
+            		asn, //asn
             		in.get("cc"),						//cc
             		(long) Double.parseDouble(in.get("total_records")),		//total_records			raw 
             		(long) Double.parseDouble(in.get("total_bytes")),		//total_bytes			raw
@@ -224,9 +227,9 @@ public class StatData {
         
         CSVReader in = new CSVReader();
         
-        in.add(Config.INSTANCE.getIntBasePath() + WekaPreprocess.CSV_REPORT_SUFFIX);
+        in.add(Config.INSTANCE.getBasePath() + WekaPreprocess.CSV_REPORT_SUFFIX);
         
-        in.add(Config.INSTANCE.getIntBaseNormPath() + WekaPreprocess.CSV_REPORT_SUFFIX);
+        in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_REPORT_SUFFIX);
         int i = 0;
         while (in.readLine()) {
             String ip = in.get("IP");
@@ -353,7 +356,7 @@ public class StatData {
         
         int i = 0;
         for (String feature : Config.INSTANCE.getFeaturePaths()) {
-	        BufferedReader in = new BufferedReader(new FileReader(feature + Config.INSTANCE.getIntServiceTimeSeries()));
+	        BufferedReader in = new BufferedReader(new FileReader(feature + Config.INSTANCE.getServiceTimeSeries()));
 	        String line = in.readLine();
 	        String prevIP = null;
 	        while ((line = in.readLine()) != null) {

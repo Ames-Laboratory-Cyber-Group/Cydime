@@ -42,14 +42,14 @@ package gov.ameslab.cydime.model;
 import gov.ameslab.cydime.model.tree.DomainTree;
 import gov.ameslab.cydime.util.CUtil;
 import gov.ameslab.cydime.util.Config;
-import gov.ameslab.cydime.util.FileUtil;
+import gov.ameslab.cydime.util.MapSet;
 import gov.ameslab.cydime.util.StringUtil;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 /**
@@ -60,67 +60,52 @@ import java.util.Set;
 public class DomainDatabase {
 	
 	public static final String NA = "na";
-	public static final String DYNAMIC = "dynamic";
 	
-	public enum DomainType {
-		NA,
-		STATIC,
-		DYNAMIC
-	}
-	
-	private Map<String, String> mDomainMap;
-	private Map<String, DomainType> mDomainTypeMap;
-	private Map<String, String> mWhoisMap;
-	private Map<String, String> mDocMap;
+	private Map<String, String> mIPDomainMap;
+	private Map<String, String> mIPASNMap;
+	private MapSet<String, String> mASNIPSet;
 	private DomainTree mDomainTree;
 	
 	public DomainDatabase() {
-		mDomainMap = CUtil.makeMap();
-		mDomainTypeMap = CUtil.makeMap();
-		mWhoisMap = CUtil.makeMap();
+		mIPDomainMap = CUtil.makeMap();
+		mIPASNMap = CUtil.makeMap();
+		mASNIPSet = new MapSet<String, String>();
 	}
 
 	public static DomainDatabase load() throws IOException {
 		DomainDatabase db = new DomainDatabase();
 		
-		db.mDocMap = FileUtil.readCSV(Config.INSTANCE.getString(Config.DOM_DOC_FILE), true);
-		
-		BufferedReader in = new BufferedReader(new FileReader(Config.INSTANCE.getString(Config.IP_DOM_FILE)));
+		BufferedReader in = new BufferedReader(new FileReader(Config.INSTANCE.getIPHostMapPath()));
 		String line = null;		
 		while ((line = in.readLine()) != null) {
 			line = line.toLowerCase();			
 			String[] split = StringUtil.trimmedSplit(line, ",");
 			if (split.length <= 1) {
 				in.close();
-				throw new IllegalArgumentException("Error reading " + Config.INSTANCE.getString(Config.IP_DOM_FILE) + ": " + line);
+				throw new IllegalArgumentException("Error reading " + Config.INSTANCE.getIPHostMapPath() + ": " + line);
 			}
 			
 			String ip = split[0];
-			if (DYNAMIC.equals(split[1])) {
-				db.mDomainTypeMap.put(ip, DomainType.DYNAMIC);
-				db.mDomainMap.put(ip, split[2]);
-			} else if (!NA.equals(split[1])) {
-				db.mDomainTypeMap.put(ip, DomainType.STATIC);
-				db.mDomainMap.put(ip, split[1]);
+			if (!NA.equals(split[1])) {
+				db.mIPDomainMap.put(ip, split[1]);
 			}
 		}
 		in.close();
-		
-		db.buildTree();
-		
-		in = new BufferedReader(new FileReader(Config.INSTANCE.getString(Config.IP_WHOIS_FILE)));
+				
+		in = new BufferedReader(new FileReader(Config.INSTANCE.getIPASNMapPath()));
 		line = null;		
 		while ((line = in.readLine()) != null) {
 			line = line.toLowerCase();			
 			String[] split = StringUtil.trimmedSplit(line, ",");
 			if (split.length <= 1) {
 				in.close();
-				throw new IllegalArgumentException("Error reading " + Config.INSTANCE.getString(Config.IP_WHOIS_FILE) + ": " + line);
+				throw new IllegalArgumentException("Error reading " + Config.INSTANCE.getIPASNMapPath() + ": " + line);
 			}
 			
 			String ip = split[0];
 			if (!NA.equals(split[1])) {
-				db.mWhoisMap.put(ip, split[1]);
+				db.mIPASNMap.put(ip, split[1]);
+				db.mASNIPSet.add(split[1], ip);
 			}
 		}
 		in.close();
@@ -128,57 +113,76 @@ public class DomainDatabase {
 		return db;
 	}
 
-	private void buildTree() {
+	public void loadTree() throws IOException {
 		mDomainTree = new DomainTree();
-		for (Entry<String, String> entry : mDomainMap.entrySet()) {
-			String ip = entry.getKey();
-			String domain = entry.getValue();
-			mDomainTree.addDomain(domain, ip);
+		BufferedReader in = new BufferedReader(new FileReader(Config.INSTANCE.getString(Config.LEXICAL_MISSION_SIM_FILE)));
+		String line = null;		
+		while ((line = in.readLine()) != null) {
+			String[] split = line.split(",");
+			String host = split[0];
+			double sim = Double.parseDouble(split[1]);
+			mDomainTree.addScore(host, sim);
 		}
+		in.close();
 		
-//		mDomainTree.print(System.out);
+		mDomainTree.calcStats();
 	}
-
-	public DomainType getDomainType(String ip) {
-		DomainType type = mDomainTypeMap.get(ip);
-		if (type == null) {
-			return DomainType.NA;
-		} else {
-			return type;
-		}
+	
+	public void clearTree() {
+		mDomainTree = null;
 	}
 	
 	public String getDomain(String ip) {
-		return mDomainMap.get(ip);
+		return mIPDomainMap.get(ip);
 	}
 	
-	public String getWhois(String ip) {
-		return mWhoisMap.get(ip);
+	public String getASN(String ip) {
+		return mIPASNMap.get(ip);
 	}
 	
-	public String getDoc(String ip) {
-		if (getDomainType(ip) == DomainType.STATIC) {
-			String domain = mDomainMap.get(ip);
-			return mDocMap.get(domain);
-		} else {
-			return null;
+	public double getScore(String ip) {
+		String domain = getDomain(ip);
+		if (domain == null) return Double.NaN;
+		
+		return mDomainTree.getScore(domain);
+	}
+	
+	public double getAverageScoreForASN(String asn) {
+		double sum = 0.0;
+		int count = 0;
+		for (String ip : mASNIPSet.get(asn)) {
+			double score = getScore(ip);
+			if (!Double.isNaN(score)) {
+				sum += score;
+				count++;
+			}
 		}
+		
+		if (count == 0) return Double.NaN;
+		return sum / count;
 	}
-	
-	public Set<String> getIPs(String domain) {
-		return mDomainTree.getIPs(domain);
-	}
-	
-	public Set<String> getLeafDomains(String domain) {
-		Set<String> leaves = CUtil.makeSet();
-		for (String ip : mDomainTree.getIPs(domain)) {
-			leaves.add(getDomain(ip));
+
+	public List<String> getDomainsForASN(String asn) {
+		Set<String> domains = CUtil.makeSet();
+		for (String ip : mASNIPSet.get(asn)) {
+			String domain = getDomain(ip);
+			if (domain != null) {
+				domains.add(domain);
+			}
 		}
-		return leaves;
+		return CUtil.makeList(domains);
 	}
 	
 	public Set<String> getAllIPs() {
-		return mDomainMap.keySet();
+		return mIPDomainMap.keySet();
 	}
 	
+	
+	public static void main(String[] args) throws IOException {
+		Config.INSTANCE.setParam(args[0]);
+		DomainDatabase db = DomainDatabase.load();
+		db.loadTree();
+		db.mDomainTree.print(System.out);
+	}
+
 }

@@ -47,7 +47,7 @@ public class HostnameCC extends FeatureSet {
 		
 		String[] values = new String[3];
 		values[values.length - 1] = "?";
-		for (String ip : mAllIPs) {
+		for (String ip : mIDs) {
 			String domain = mDomainDB.getDomain(ip);
 			if (domain == null) {
 				values[0] = "'*'";
@@ -70,7 +70,7 @@ public class HostnameCC extends FeatureSet {
 		
 		FileUtil.copy(mCurrentOutPath + WekaPreprocess.ALL_SUFFIX, mCurrentOutPath + WekaPreprocess.REPORT_SUFFIX);
 		
-		return new InstanceDatabase(mCurrentOutPath, mAllIPs);
+		return new InstanceDatabase(mCurrentOutPath, mIDs);
 	}
 
 	private Map<String, String> readCC() throws IOException {

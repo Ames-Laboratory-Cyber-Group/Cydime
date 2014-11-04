@@ -50,14 +50,14 @@ import java.util.List;
  */
 public class FeatureSet {
 
-	protected List<String> mAllIPs;
+	protected List<String> mIDs;
 	protected String mCurrentInPath;
 	protected String mCurrentOutPath;
 	protected String[] mFeaturePaths;
 	protected String[] mPreprocessPaths;
 
-	public FeatureSet(List<String> allIPs, String inPath, String outPath) {
-		mAllIPs = allIPs;
+	public FeatureSet(List<String> ids, String inPath, String outPath) {
+		mIDs = ids;
 		mCurrentInPath = Config.INSTANCE.getCurrentFeaturePath() + inPath;
 		mCurrentOutPath = Config.INSTANCE.getCurrentPreprocessPath() + outPath;
 		

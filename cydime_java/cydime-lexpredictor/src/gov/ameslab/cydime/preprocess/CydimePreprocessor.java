@@ -45,6 +45,7 @@ import gov.ameslab.cydime.preprocess.community.BiGraph;
 import gov.ameslab.cydime.preprocess.dailyprofile.DailyProfile;
 import gov.ameslab.cydime.preprocess.dailyprofile.DailyProfile.Normalizer;
 import gov.ameslab.cydime.preprocess.hierarchy.Hostname;
+import gov.ameslab.cydime.preprocess.hierarchy.Hostname.Unit;
 import gov.ameslab.cydime.preprocess.netflow.Netflow;
 import gov.ameslab.cydime.preprocess.service.ServiceMax;
 import gov.ameslab.cydime.preprocess.timeseries.TimeAccess;
@@ -59,7 +60,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -74,8 +74,7 @@ public class CydimePreprocessor {
 	private static final Logger Log = Logger.getLogger(CydimePreprocessor.class.getName());
 	
 	private DomainDatabase mDomainDB;
-	private List<String> mExtIPs;
-	private List<String> mIntIPs;
+	private List<String> mIDs;
 	
 	public static void main(String[] args) throws IOException {
 		if (args.length != 1) {
@@ -96,26 +95,39 @@ public class CydimePreprocessor {
 		mDomainDB = DomainDatabase.load();
 	}
 	
-	private void run() throws IOException {
-		runExt();
-		runInt();
+	private void run() {
+		try {
+			runExtIP();
+		} catch (IOException e) {
+			Log.log(Level.SEVERE, e.toString());
+			e.printStackTrace();
+		}
+		
+		try {
+			runExtASN();
+		} catch (IOException e) {
+			Log.log(Level.SEVERE, e.toString());
+			e.printStackTrace();
+		}
+		
+		try {
+			runInt();
+		} catch (IOException e) {
+			Log.log(Level.SEVERE, e.toString());
+			e.printStackTrace();
+		}
 	}
 	
-	private void runExt() throws IOException {
-		loadExtIPs();
+	private void runExtIP() throws IOException {
+		Config.INSTANCE.setFeatureSet(Config.FEATURE_IP_DIR);
+		loadExtIDs();
 		
-		InstanceDatabase hierarchy = new Hostname(mExtIPs, Config.INSTANCE.getHierarchy(), Config.INSTANCE.getHierarchy(), mDomainDB).run();
-		loadLabels(hierarchy);
-		hierarchy.saveIPs();
-		hierarchy.write();
-		hierarchy.writeReport();
-		
-		InstanceDatabase service = new ServiceMax(mExtIPs, Config.INSTANCE.getService(), Config.INSTANCE.getService()).run();
-		InstanceDatabase netflow = new Netflow(mExtIPs, Config.INSTANCE.getNetflow(), Config.INSTANCE.getNetflow()).run();
-		InstanceDatabase ts = new TimeSeries(mExtIPs, Config.INSTANCE.getTimeSeries(), Config.INSTANCE.getTimeSeries()).run();
-		InstanceDatabase ta = new TimeAccess(mExtIPs, Config.INSTANCE.getTimeSeries(), Config.INSTANCE.getTimeAccess()).run();
-		InstanceDatabase dpService = new DailyProfile(mExtIPs, Config.INSTANCE.getDailyProfile(), Config.INSTANCE.getDailyProfile()).run(Normalizer.SERVICE_SUM);
-		InstanceDatabase dpTime = new DailyProfile(mExtIPs, Config.INSTANCE.getDailyProfile(), Config.INSTANCE.getDailyProfile()).run(Normalizer.TIME_SUM);
+		InstanceDatabase service = new ServiceMax(mIDs, Config.INSTANCE.getService(), Config.INSTANCE.getService()).run();
+		InstanceDatabase netflow = new Netflow(mIDs, Config.INSTANCE.getNetflow(), Config.INSTANCE.getNetflow()).run();
+		InstanceDatabase ts = new TimeSeries(mIDs, Config.INSTANCE.getTimeSeries(), Config.INSTANCE.getTimeSeries()).run();
+		InstanceDatabase ta = new TimeAccess(mIDs, Config.INSTANCE.getTimeSeries(), Config.INSTANCE.getTimeAccess()).run();
+		InstanceDatabase dpService = new DailyProfile(mIDs, Config.INSTANCE.getDailyProfile(), Config.INSTANCE.getDailyProfile()).run(Normalizer.SERVICE_SUM);
+		InstanceDatabase dpTime = new DailyProfile(mIDs, Config.INSTANCE.getDailyProfile(), Config.INSTANCE.getDailyProfile()).run(Normalizer.TIME_SUM);
 		
 		InstanceDatabase base = InstanceDatabase.mergeFeatures(Config.INSTANCE.getBasePath(),
 				service,
@@ -124,15 +136,29 @@ public class CydimePreprocessor {
 				ta,
 				dpService,
 				dpTime
-				);
+				);		
+		service = null;
+		netflow = null;
+		ts = null;
+		ta = null;
+		dpService = null;
+		dpTime = null;
 		
-		loadLabels(base);
+		mDomainDB.loadTree();
+		InstanceDatabase hierarchy = new Hostname(mIDs, Config.INSTANCE.getHierarchy(), Config.INSTANCE.getHierarchy(), mDomainDB, Unit.IP).run();
+		loadLabelsForIP(hierarchy);
+		loadLabelsForIP(base);
+		mDomainDB.clearTree();
+		
+		hierarchy.saveIPs();
+		hierarchy.write();
+		hierarchy.writeReport();
 		
 		base.saveIPs();
 		base.write();
 		base.writeReport();
 		
-		FileUtil.copy(base.getIPPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.IP_SUFFIX);
+		FileUtil.copy(base.getIDPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.ID_SUFFIX);
 		FileUtil.copy(base.getARFFPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.ALL_SUFFIX);
 		FileUtil.copy(base.getReportARFFPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.REPORT_SUFFIX);
 		InstanceDatabase baseNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
@@ -140,25 +166,73 @@ public class CydimePreprocessor {
 		baseNorm.writeReport();
 		
 		//for Explorer
-		new BiGraph(mExtIPs, Config.INSTANCE.getPairService(), Config.INSTANCE.getPairService()).run();
+		new BiGraph(mIDs, Config.INSTANCE.getPairService(), Config.INSTANCE.getPairService()).run();
 	}
 
-	private void loadExtIPs() throws IOException {
-		Set<String> netIPs = readIPs(Config.INSTANCE.getNetflow(), 0);
-		Set<String> servIPs = readIPs(Config.INSTANCE.getService(), 0);
-		Set<String> timeIPs = readIPs(Config.INSTANCE.getTimeSeries(), 0);
-		Set<String> pairServIPs = readIPs(Config.INSTANCE.getPairService(), 1);
+	private void loadExtIDs() throws IOException {
+		Set<String> netIPs = readIDs(Config.INSTANCE.getNetflow(), 0);
+		Set<String> servIPs = readIDs(Config.INSTANCE.getService(), 0);
+		Set<String> timeIPs = readIDs(Config.INSTANCE.getTimeSeries(), 0);
+		Set<String> pairServIPs = readIDs(Config.INSTANCE.getPairService(), 1);
 		Set<String> allIPs = netIPs;
 		allIPs.retainAll(servIPs);
 		allIPs.retainAll(timeIPs);
 		allIPs.retainAll(pairServIPs);
 		
-		mExtIPs = CUtil.makeList(allIPs);
-		Collections.sort(mExtIPs);
+		mIDs = CUtil.makeList(allIPs);
+		Collections.sort(mIDs);
 
-		Log.log(Level.INFO, "External IP set = {0}", mExtIPs.size() );
+		Log.log(Level.INFO, "Loaded {0}", mIDs.size() );
 	}
-	
+
+	private void runExtASN() throws IOException {
+		Config.INSTANCE.setFeatureSet(Config.FEATURE_ASN_DIR);
+		loadExtIDs();
+		
+		InstanceDatabase service = new ServiceMax(mIDs, Config.INSTANCE.getService(), Config.INSTANCE.getService()).run();
+		InstanceDatabase netflow = new Netflow(mIDs, Config.INSTANCE.getNetflow(), Config.INSTANCE.getNetflow()).run();
+		InstanceDatabase ts = new TimeSeries(mIDs, Config.INSTANCE.getTimeSeries(), Config.INSTANCE.getTimeSeries()).run();
+		InstanceDatabase ta = new TimeAccess(mIDs, Config.INSTANCE.getTimeSeries(), Config.INSTANCE.getTimeAccess()).run();
+		InstanceDatabase dpService = new DailyProfile(mIDs, Config.INSTANCE.getDailyProfile(), Config.INSTANCE.getDailyProfile()).run(Normalizer.SERVICE_SUM);
+		InstanceDatabase dpTime = new DailyProfile(mIDs, Config.INSTANCE.getDailyProfile(), Config.INSTANCE.getDailyProfile()).run(Normalizer.TIME_SUM);
+		
+		InstanceDatabase base = InstanceDatabase.mergeFeatures(Config.INSTANCE.getBasePath(),
+				service,
+				netflow,
+				ts,
+				ta,
+				dpService,
+				dpTime
+				);		
+		service = null;
+		netflow = null;
+		ts = null;
+		ta = null;
+		dpService = null;
+		dpTime = null;
+		
+		mDomainDB.loadTree();
+		InstanceDatabase hierarchy = new Hostname(mIDs, Config.INSTANCE.getHierarchy(), Config.INSTANCE.getHierarchy(), mDomainDB, Unit.ASN).run();
+		loadLabelsForASN(hierarchy);
+		loadLabelsForASN(base);
+		mDomainDB.clearTree();
+		
+		hierarchy.saveIPs();
+		hierarchy.write();
+		hierarchy.writeReport();
+		
+		base.saveIPs();
+		base.write();
+		base.writeReport();
+		
+		FileUtil.copy(base.getIDPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.ID_SUFFIX);
+		FileUtil.copy(base.getARFFPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.ALL_SUFFIX);
+		FileUtil.copy(base.getReportARFFPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.REPORT_SUFFIX);
+		InstanceDatabase baseNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
+		baseNorm.normalize();
+		baseNorm.writeReport();
+	}
+
 	//For experiment
 //	private void loadExtIPs() throws IOException {
 //		Set<String> netIPs = readNetflowIPs(Config.INSTANCE.getNetflow(), 0);
@@ -193,15 +267,31 @@ public class CydimePreprocessor {
 //		
 //		Log.log(Level.INFO, "External IP set = {0}", mExtIPs.size() );
 //	}
-		
+//
+//	private static Set<String> readNetflowIPs(String file, int ipIndex) throws IOException {
+//		Set<String> ips = CUtil.makeSet();
+//		BufferedReader in = new BufferedReader(new FileReader(Config.INSTANCE.getCurrentFeaturePath() + file));
+//		String line = in.readLine();		
+//		while ((line = in.readLine()) != null) {
+//			String[] split = StringUtil.trimmedSplit(line, ",");
+//			ips.add(split[ipIndex]);
+//		}
+//
+//		in.close();
+//
+//		Log.log(Level.INFO, "Read {0} IPs from {1}", new Object[] {ips.size(), file} );
+//		return ips;
+//	}
+
 	private void runInt() throws IOException {
+		Config.INSTANCE.setFeatureSet(Config.FEATURE_INT_DIR);
 		loadIntIPs();
 		
-		InstanceDatabase netflow = new Netflow(mIntIPs, Config.INSTANCE.getIntNetflow(), Config.INSTANCE.getIntNetflow()).run();
-		InstanceDatabase ts = new TimeSeries(mIntIPs, Config.INSTANCE.getIntTimeSeries(), Config.INSTANCE.getIntTimeSeries()).run();
-		InstanceDatabase ta = new TimeAccess(mIntIPs, Config.INSTANCE.getIntTimeSeries(), Config.INSTANCE.getIntTimeAccess()).run();
+		InstanceDatabase netflow = new Netflow(mIDs, Config.INSTANCE.getNetflow(), Config.INSTANCE.getNetflow()).run();
+		InstanceDatabase ts = new TimeSeries(mIDs, Config.INSTANCE.getTimeSeries(), Config.INSTANCE.getTimeSeries()).run();
+		InstanceDatabase ta = new TimeAccess(mIDs, Config.INSTANCE.getTimeSeries(), Config.INSTANCE.getTimeAccess()).run();
 		
-		InstanceDatabase baseInt = InstanceDatabase.mergeFeatures(Config.INSTANCE.getIntBasePath(),
+		InstanceDatabase baseInt = InstanceDatabase.mergeFeatures(Config.INSTANCE.getBasePath(),
 				netflow,
 				ts,
 				ta);
@@ -209,52 +299,27 @@ public class CydimePreprocessor {
 		baseInt.saveIPs();
 		baseInt.writeReport();
 		
-		FileUtil.copy(baseInt.getIPPath(), Config.INSTANCE.getIntBaseNormPath() + WekaPreprocess.IP_SUFFIX);
-		FileUtil.copy(baseInt.getARFFPath(), Config.INSTANCE.getIntBaseNormPath() + WekaPreprocess.ALL_SUFFIX);
-		FileUtil.copy(baseInt.getReportARFFPath(), Config.INSTANCE.getIntBaseNormPath() + WekaPreprocess.REPORT_SUFFIX);
-		InstanceDatabase baseIntNorm = InstanceDatabase.load(Config.INSTANCE.getIntBaseNormPath());
+		FileUtil.copy(baseInt.getIDPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.ID_SUFFIX);
+		FileUtil.copy(baseInt.getARFFPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.ALL_SUFFIX);
+		FileUtil.copy(baseInt.getReportARFFPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.REPORT_SUFFIX);
+		InstanceDatabase baseIntNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
 		baseIntNorm.normalize();
 		baseIntNorm.writeReport();
 	}
 
 	private void loadIntIPs() throws IOException {
-		Set<String> netIPs = readIPs(Config.INSTANCE.getIntNetflow(), 0);
-		Set<String> timeIPs = readIPs(Config.INSTANCE.getIntTimeSeries(), 0);
+		Set<String> netIPs = readIDs(Config.INSTANCE.getNetflow(), 0);
+		Set<String> timeIPs = readIDs(Config.INSTANCE.getTimeSeries(), 0);
 		Set<String> allIPs = netIPs;
 		allIPs.retainAll(timeIPs);
 		
-		mIntIPs = CUtil.makeList(allIPs);
-		Collections.sort(mIntIPs);
+		mIDs = CUtil.makeList(allIPs);
+		Collections.sort(mIDs);
 		
-		Log.log(Level.INFO, "Internal IP set = {0}", mIntIPs.size() );
+		Log.log(Level.INFO, "Internal IP set = {0}", mIDs.size() );
 	}
 	
-
-	static class IPData {
-		public String IP;
-		public double Data;
-		public IPData(String ip, double data) {
-			IP = ip;
-			Data = data;
-		}		
-	}
-	
-	private static Set<String> readNetflowIPs(String file, int ipIndex) throws IOException {
-		Set<String> ips = CUtil.makeSet();
-		BufferedReader in = new BufferedReader(new FileReader(Config.INSTANCE.getCurrentFeaturePath() + file));
-		String line = in.readLine();		
-		while ((line = in.readLine()) != null) {
-			String[] split = StringUtil.trimmedSplit(line, ",");
-			ips.add(split[ipIndex]);
-		}
-
-		in.close();
-
-		Log.log(Level.INFO, "Read {0} IPs from {1}", new Object[] {ips.size(), file} );
-		return ips;
-	}
-
-	private static Set<String> readIPs(String file, int ipIndex) throws IOException {
+	private static Set<String> readIDs(String file, int ipIndex) throws IOException {
 		Set<String> ips = CUtil.makeSet();
 		for (String featurePath : Config.INSTANCE.getFeaturePaths()) {
 			BufferedReader in = new BufferedReader(new FileReader(featurePath + file));
@@ -267,45 +332,66 @@ public class CydimePreprocessor {
 			in.close();
 		}
 		
-		Log.log(Level.INFO, "Read {0} IPs from {1}", new Object[] {ips.size(), file} );
+		Log.log(Level.INFO, "Read {0} from {1}", new Object[] {ips.size(), file} );
 		return ips;
 	}
 
-	private void loadLabels(InstanceDatabase base) throws IOException {
-		Map<String, String> docSims = FileUtil.readCSV(Config.INSTANCE.getString(Config.LEXICAL_MISSION_SIM_FILE), 1, true);
-		
+	private void loadLabelsForIP(InstanceDatabase base) throws IOException {
 		double min = Double.MAX_VALUE;
 		double max = -Double.MAX_VALUE;
 		
-		for (String ip : base.getIPs()) {
-			String doc = mDomainDB.getDoc(ip);
-			if (doc != null) {
-				String simStr = docSims.get(doc);
-				if (simStr == null) {
-					System.err.println("Error: Mission similarity not found for " + doc);
-					continue;
-				}
-				
-				double sim = Double.parseDouble(simStr);
-				if (sim < min) {
-					min = sim;
-				}
-				if (sim > max) {
-					max = sim;
-				}
+		for (String id : base.getIDs()) {
+			double sim = mDomainDB.getScore(id);
+			if (Double.isNaN(sim)) continue;
+			
+			if (sim < min) {
+				min = sim;
+			}
+			if (sim > max) {
+				max = sim;
 			}
 		}
 		
-		for (String ip : base.getIPs()) {
-			String doc = mDomainDB.getDoc(ip);
-			if (doc != null) {
-				String simStr = docSims.get(doc);
-				if (simStr == null) continue;
-				
-				double sim = Double.parseDouble(simStr);
-				base.setLabel(ip, (sim - min) / (max - min));
-			}
+		if (max - min <= 0.0) {
+			Log.log(Level.SEVERE, "Mission similarities have 0 range.");
+			return;
+		}
+		
+		for (String id : base.getIDs()) {
+			double sim = mDomainDB.getScore(id);
+			if (Double.isNaN(sim)) continue;
+			
+			base.setLabel(id, (sim - min) / (max - min));
 		}
 	}
 
+	private void loadLabelsForASN(InstanceDatabase base) throws IOException {
+		double min = Double.MAX_VALUE;
+		double max = -Double.MAX_VALUE;
+		
+		for (String id : base.getIDs()) {
+			double sim = mDomainDB.getAverageScoreForASN(id);
+			if (Double.isNaN(sim)) continue;
+			
+			if (sim < min) {
+				min = sim;
+			}
+			if (sim > max) {
+				max = sim;
+			}
+		}
+		
+		if (max - min <= 0.0) {
+			Log.log(Level.SEVERE, "Mission similarities have 0 range.");
+			return;
+		}
+		
+		for (String id : base.getIDs()) {
+			double sim = mDomainDB.getAverageScoreForASN(id);
+			if (Double.isNaN(sim)) continue;
+			
+			base.setLabel(id, (sim - min) / (max - min));
+		}
+	}
+	
 }

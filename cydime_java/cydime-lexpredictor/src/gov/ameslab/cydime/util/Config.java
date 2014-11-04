@@ -78,12 +78,13 @@ public class Config {
 	public static final String FEATURE_LABEL_FILE = "label.feature";
 	public static final String LEXICAL_MISSION_SIM_FILE = "lexical.mission.sim";
 	public static final String MISSION_SIM_THRESHOLD = "lexical.mission.threhold";
-	public static final String IP_DOM_FILE = "label.ip_dom";
-	public static final String IP_WHOIS_FILE = "label.ip_whois";
-	public static final String DOM_DOC_FILE = "label.dom_doc";
-	
+	public static final String FEATURE_IP_DIR = "ip/";
+	public static final String FEATURE_ASN_DIR = "asn/";
+	public static final String FEATURE_INT_DIR = "int/";
+
 	public static final Config INSTANCE;
 
+	
 	
 	static {
 		try {
@@ -100,7 +101,8 @@ public class Config {
 	private String mCurrentDatePath;
 	private String[] mFeaturePaths; 
 	private String[] mPreprocessPaths;
-
+	private String mFeatureSet;
+	
 	private Config() throws ConfigurationException {
 		mConfig = new PropertiesConfiguration(CONFIG_FILE);
 //		Log.log(Level.INFO, "Loaded configuration: " + getConfigKeys());
@@ -117,10 +119,6 @@ public class Config {
 		return keys;
 	}
 
-	public String getRootPath() {
-		return mRootPath;
-	}
-	
 	public int getInt(String key) {
 		if (!mConfig.containsKey(key)) throw new IllegalArgumentException("Error: Key not found in configuration: " + key);
 		return mConfig.getInt(key);
@@ -137,24 +135,51 @@ public class Config {
 	
 	public void setParam(String datePath) {
 		mCurrentDatePath = StringUtil.appendSlash(datePath);
-		searchFeaturePaths();
+	}
+
+	public String getRootPath() {
+		return mRootPath;
 	}
 	
-	private void searchFeaturePaths() {
+	public String getCurrentDatePath() {
+		return mCurrentDatePath;
+	}
+	
+	public String getRootDatePath() {
+		return mRootPath + mCurrentDatePath;
+	}
+	
+	public void setFeatureSet(String dir) {
+		mFeatureSet = dir;
 		DateFormat format = new SimpleDateFormat("yyyy/MM/dd");
 		List<String> features = CUtil.makeList();
-		features.addAll(Arrays.asList(
-				getPath(FEATURE_DIR) + getService(),
-				getPath(FEATURE_DIR) + getNetflow(),
-				getPath(FEATURE_DIR) + getTimeSeries(),
-				getPath(FEATURE_DIR) + getServiceTimeSeries(),
-				getPath(FEATURE_DIR) + getPairService(),
-				getPath(FEATURE_DIR) + getIntService(),
-				getPath(FEATURE_DIR) + getIntNetflow(),
-				getPath(FEATURE_DIR) + getIntTimeSeries(),
-				getPath(FEATURE_DIR) + getIntServiceTimeSeries()
-		));
-		features.addAll(TimeSeries.getRequiredPaths());
+		if (FEATURE_IP_DIR.equals(mFeatureSet)) {
+			features.addAll(Arrays.asList(
+					getPath(FEATURE_DIR) + mFeatureSet + getService(),
+					getPath(FEATURE_DIR) + mFeatureSet + getNetflow(),
+					getPath(FEATURE_DIR) + mFeatureSet + getTimeSeries(),
+					getPath(FEATURE_DIR) + mFeatureSet + getDailyProfile(),
+					getPath(FEATURE_DIR) + mFeatureSet + getServiceTimeSeries(),	//Explorer
+					getPath(FEATURE_DIR) + mFeatureSet + getPairService()			//Explorer
+			));
+		} else if (FEATURE_ASN_DIR.equals(mFeatureSet)) {
+			features.addAll(Arrays.asList(
+					getPath(FEATURE_DIR) + mFeatureSet + getService(),
+					getPath(FEATURE_DIR) + mFeatureSet + getNetflow(),
+					getPath(FEATURE_DIR) + mFeatureSet + getTimeSeries(),
+					getPath(FEATURE_DIR) + mFeatureSet + getDailyProfile(),
+					getPath(FEATURE_DIR) + mFeatureSet + getServiceTimeSeries(),	//Explorer
+					getPath(FEATURE_DIR) + mFeatureSet + getPairService()			//Explorer
+			));
+		} else if (FEATURE_INT_DIR.equals(mFeatureSet)) {
+			features.addAll(Arrays.asList(
+					getPath(FEATURE_DIR) + mFeatureSet + getService(),
+					getPath(FEATURE_DIR) + mFeatureSet + getNetflow(),
+					getPath(FEATURE_DIR) + mFeatureSet + getTimeSeries(),
+					getPath(FEATURE_DIR) + mFeatureSet + getServiceTimeSeries()
+			));
+		}
+		features.addAll(TimeSeries.getRequiredPaths(getPath(PREPROCESS_DIR) + mFeatureSet));
 		
 		Date currentDate = null;
 		try {
@@ -185,12 +210,12 @@ public class Config {
 		
 		mFeaturePaths = new String[dates.size()];
 		for (int i = 0; i < mFeaturePaths.length; i++) {
-			mFeaturePaths[i] = mRootPath + format.format(dates.get(i)) + "/" + getPath(FEATURE_DIR);
+			mFeaturePaths[i] = mRootPath + format.format(dates.get(i)) + "/" + getPath(FEATURE_DIR) + mFeatureSet;
 		}
 		
 		mPreprocessPaths = new String[dates.size()];
 		for (int i = 0; i < mPreprocessPaths.length; i++) {
-			mPreprocessPaths[i] = mRootPath + format.format(dates.get(i)) + "/" + getPath(PREPROCESS_DIR);
+			mPreprocessPaths[i] = mRootPath + format.format(dates.get(i)) + "/" + getPath(PREPROCESS_DIR) + mFeatureSet;
 		}
 	}
 
@@ -206,12 +231,8 @@ public class Config {
 		return true;
 	}
 	
-	public String getCurrentDatePath() {
-		return mCurrentDatePath;
-	}
-	
 	public String getCurrentFeaturePath() {
-		return mRootPath + mCurrentDatePath + getPath(FEATURE_DIR);
+		return getRootDatePath() + getPath(FEATURE_DIR) + mFeatureSet;
 	}
 	
 	public String[] getFeaturePaths() {
@@ -219,7 +240,7 @@ public class Config {
 	}
 	
 	public String getCurrentPreprocessPath() {
-		return mRootPath + mCurrentDatePath + getPath(PREPROCESS_DIR);
+		return getRootDatePath() + getPath(PREPROCESS_DIR) + mFeatureSet;
 	}
 	
 	public String[] getPreprocessPaths() {
@@ -227,45 +248,39 @@ public class Config {
 	}
 	
 	public String getCurrentModelPath() {
-		return mRootPath + mCurrentDatePath + getPath(MODEL_DIR);
+		return getRootDatePath() + getPath(MODEL_DIR) + mFeatureSet;
 	}
 	
 	public String getCurrentReportPath() {
-		return mRootPath + mCurrentDatePath + getPath(REPORT_DIR);
+		return getRootDatePath() + getPath(REPORT_DIR) + mFeatureSet;
 	}
 	
 	
 	//getFeaturePath
-	public String getDailyProfile() {	return "pair_services_timeseries.ext.features";	}
-	public String getService() {	return "services.ext.features";	}
-	public String getNetflow() {	return "full_netflow.ext.features";	}
-	public String getTimeSeries() {	return "timeseries.ext.features";	}
-	public String getTimeAccess() {	return "timeseries.ext.features.access";	}
-	public String getServiceTimeSeries() {	return "services_timeseries.ext.features";	}
+	public String getDailyProfile() {	return "pair_services_timeseries.features";	}
+	public String getService() {	return "services.features";	}
+	public String getNetflow() {	return "full_netflow.features";	}
+	public String getTimeSeries() {	return "timeseries.features";	}
+	public String getTimeAccess() {	return "timeseries.features.access";	}
+	public String getServiceTimeSeries() {	return "services_timeseries.features";	}
 	public String getPairService() {	return "pair_services.features";	}
 	public String getLexical() {	return "lexical.features";	}
 	
-	public String getIntService() {	return "services.int.features";	}
-	public String getIntNetflow() {	return "full_netflow.int.features";	}
-	public String getIntTimeSeries() {	return "timeseries.int.features";	}
-	public String getIntTimeAccess() {	return "timeseries.int.features.access";	}
-	public String getIntServiceTimeSeries() {	return "services_timeseries.int.features";	}
-	
 	//getPreprocessPath
 	public String getHierarchy() {	return "hierarchy.features";	}
+	public String getIPHostMapPath() {	return getRootDatePath() + getPath(PREPROCESS_DIR) + "ipHostMap.csv";	}
+	public String getIPASNMapPath() {	return getRootDatePath() + getPath(PREPROCESS_DIR) + "ipASNMap.csv";	}
 	public String getCommunityPath() {	return getCurrentPreprocessPath() + "pair_services.features.bicom.csv";	}
 	public String getExtIntGraphPath() {	return getCurrentPreprocessPath() + "pair_services.features.graph.csv";	}
 	
 	//getModelPath
-	public String getBasePath() {	return getCurrentModelPath() + "base.ext";	}
-	public String getBaseNormPath() {	return getCurrentModelPath() + "base.ext.norm";	}
+	public String getBasePath() {	return getCurrentModelPath() + "base";	}
+	public String getBaseNormPath() {	return getCurrentModelPath() + "base.norm";	}
 	public String getBaseScorePath() {	return getCurrentModelPath() + "base_score";	}
-	public String getStackPath() {	return getCurrentModelPath() + "stack.ext";	}
+	public String getStackPath() {	return getCurrentModelPath() + "stack";	}
 	public String getRankScorePath() {	return getCurrentModelPath() + "rank_score";	}
 	
 	//getReportPath
-	public String getIntBasePath() {	return getCurrentReportPath() + "base.int";	}
-	public String getIntBaseNormPath() {	return getCurrentReportPath() + "base.int.norm";	}
 	public String getFinalResultPath() {	return getCurrentReportPath() + "cydime.scores";	}
 	public String getLexicalSimPath() {	return getCurrentReportPath() + "lexical_sim";	}
 	public String getSemanticPath() {	return getCurrentReportPath() + "semantic";	}

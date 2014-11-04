@@ -21,11 +21,18 @@ public class Hostname extends FeatureSet {
 
 	private static final Logger Log = Logger.getLogger(Hostname.class.getName());
 	
+	public enum Unit {
+		IP,
+		ASN
+	}
+	
 	private DomainDatabase mDomainDB;
+	private Unit mUnit;
 
-	public Hostname(List<String> allIPs, String inPath, String outPath, DomainDatabase domainDB) {
-		super(allIPs, inPath, outPath);
+	public Hostname(List<String> ids, String inPath, String outPath, DomainDatabase domainDB, Unit unit) {
+		super(ids, inPath, outPath);
 		mDomainDB = domainDB;
+		mUnit = unit;
 	}
 	
 	public InstanceDatabase run() throws IOException {
@@ -37,8 +44,19 @@ public class Hostname extends FeatureSet {
 		
 		String[] values = new String[2];
 		values[values.length - 1] = "?";
-		for (String ip : mAllIPs) {
-			String domain = mDomainDB.getDomain(ip);
+		for (String id : mIDs) {
+			String domain = null;
+			switch (mUnit) {
+			case IP:
+				domain = mDomainDB.getDomain(id);
+			case ASN:
+				List<String> domains = mDomainDB.getDomainsForASN(id);
+				if (!domains.isEmpty()) {
+					domain = domains.get(0);
+				}
+			default:					
+			}
+			
 			if (domain == null) {
 				values[0] = "'*'";
 			} else {
@@ -52,7 +70,7 @@ public class Hostname extends FeatureSet {
 		
 		FileUtil.copy(mCurrentOutPath + WekaPreprocess.ALL_SUFFIX, mCurrentOutPath + WekaPreprocess.REPORT_SUFFIX);
 		
-		return new InstanceDatabase(mCurrentOutPath, mAllIPs);
+		return new InstanceDatabase(mCurrentOutPath, mIDs);
 	}
 	
 }

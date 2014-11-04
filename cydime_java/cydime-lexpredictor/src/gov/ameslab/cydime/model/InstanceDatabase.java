@@ -70,7 +70,7 @@ public class InstanceDatabase {
 	private static final String TRAIN_PREFIX = "train:";
 	
 	private String mPath;
-	private List<String> mIPs;
+	private List<String> mIDs;
 
 	private Instances mInstances;
 	private Map<String, Instance> mInstanceMap;
@@ -79,8 +79,8 @@ public class InstanceDatabase {
 	private IndexedList<String> mAttributeIndex;
 	private IndexedList<String> mReportAttributeIndex;
 	
-	private List<String> mIPTrain;
-	private List<String> mIPTest;
+	private List<String> mIDTrain;
+	private List<String> mIDTest;
 	private Instances mTrainInstances;
 	private Instances mTestInstances;
 	
@@ -88,13 +88,13 @@ public class InstanceDatabase {
 		this(path, CUtil.<String>makeList());
 	}
 
-	public InstanceDatabase(String path, List<String> ips) {
+	public InstanceDatabase(String path, List<String> ids) {
 		mPath = path;
-		mIPs = ips;
+		mIDs = ids;
 	}
 
-	public List<String> getIPs() {
-		return mIPs;
+	public List<String> getIDs() {
+		return mIDs;
 	}
 
 	public String getARFFPath() {
@@ -113,8 +113,8 @@ public class InstanceDatabase {
 		return mPath + WekaPreprocess.CSV_REPORT_SUFFIX;
 	}
 	
-	public String getIPPath() {
-		return mPath + WekaPreprocess.IP_SUFFIX;
+	public String getIDPath() {
+		return mPath + WekaPreprocess.ID_SUFFIX;
 	}
 
 	public String getTrainPath() {
@@ -134,7 +134,7 @@ public class InstanceDatabase {
 	}
 
 	public void saveIPs() throws IOException {
-		FileUtil.writeFile(getIPPath(), mIPs);
+		FileUtil.writeFile(getIDPath(), mIDs);
 	}
 
 	private void loadInstances() {
@@ -149,12 +149,12 @@ public class InstanceDatabase {
 		
 		mInstanceMap = CUtil.makeMap();
 		for (int i = 0; i < mInstances.numInstances(); i++) {
-			mInstanceMap.put(mIPs.get(i), mInstances.instance(i));
+			mInstanceMap.put(mIDs.get(i), mInstances.instance(i));
 		}
 		
 		mReportInstanceMap = CUtil.makeMap();
 		for (int i = 0; i < mReportInstances.numInstances(); i++) {
-			mReportInstanceMap.put(mIPs.get(i), mReportInstances.instance(i));
+			mReportInstanceMap.put(mIDs.get(i), mReportInstances.instance(i));
 		}
 		
 		List<String> names = CUtil.makeList();
@@ -177,9 +177,9 @@ public class InstanceDatabase {
 	}
 
 	//Requires loadInstances
-	public Instance getWekaInstance(String ip) {
+	public Instance getWekaInstance(String id) {
 		loadInstances();
-		return mInstanceMap.get(ip);
+		return mInstanceMap.get(id);
 	}
 
 	//Requires loadInstances
@@ -189,22 +189,22 @@ public class InstanceDatabase {
 	}
 
 	//Requires loadInstances
-	public Instance getWekaReportInstance(String ip) {
+	public Instance getWekaReportInstance(String id) {
 		loadInstances();
-		return mReportInstanceMap.get(ip);
+		return mReportInstanceMap.get(id);
 	}
 
 	//Requires loadInstances
-	public boolean hasLabel(String ip) {
+	public boolean hasLabel(String id) {
 		loadInstances();
-		Instance inst = getWekaInstance(ip);
+		Instance inst = getWekaInstance(id);
 		return !inst.classIsMissing();
 	}
 	
 	//Requires loadInstances
-	public double getLabel(String ip) {
+	public double getLabel(String id) {
 		loadInstances();
-		Instance inst = getWekaInstance(ip);
+		Instance inst = getWekaInstance(id);
 		if (inst.classIsMissing()) {
 			return Double.NaN;
 		} else {
@@ -213,16 +213,16 @@ public class InstanceDatabase {
 	}
 	
 	//Requires loadInstances
-	public void setLabel(String ip, Double label) {
+	public void setLabel(String id, Double label) {
 		loadInstances();
-		Instance inst = getWekaInstance(ip);
+		Instance inst = getWekaInstance(id);
 		if (label == null || label.isNaN()) {
 			inst.setClassMissing();
 		} else {
 			inst.setClassValue(label);
 		}
 		
-		Instance instReport = getWekaReportInstance(ip);
+		Instance instReport = getWekaReportInstance(id);
 		if (label == null || label.isNaN()) {
 			instReport.setClassMissing();
 		} else {
@@ -257,20 +257,20 @@ public class InstanceDatabase {
 		
 		mTrainInstances = new Instances(mInstances, 0);
 		mTestInstances = new Instances(mInstances, 0);
-		mIPTrain = CUtil.makeList();
-		mIPTest = CUtil.makeList();
+		mIDTrain = CUtil.makeList();
+		mIDTest = CUtil.makeList();
 		
-		for (String ip : mIPs) {
-			Instance inst = mInstanceMap.get(ip);
+		for (String id : mIDs) {
+			Instance inst = mInstanceMap.get(id);
 			
 			if (inst.classIsMissing()) {
 				inst.setDataset(mTestInstances);
 				mTestInstances.add(inst);
-				mIPTest.add(ip);
+				mIDTest.add(id);
 			} else {
 				inst.setDataset(mTrainInstances);
 				mTrainInstances.add(inst);
-				mIPTrain.add(ip);
+				mIDTrain.add(id);
 			}
 		}
 	}
@@ -291,17 +291,17 @@ public class InstanceDatabase {
 	private void writeReport(String file, Map<String, Instance> instanceMap, IndexedList<String> attributeIndex) throws IOException {
 		BufferedWriter out = new BufferedWriter(new FileWriter(file));
 		
-		out.write("IP");
+		out.write("ID");
 		for (String att : attributeIndex.getList()) {
 			out.write(",");
 			out.write(att);
 		}
 		out.newLine();
 		
-		for (String ip : mIPs) {
-			Instance inst = instanceMap.get(ip);
+		for (String id : mIDs) {
+			Instance inst = instanceMap.get(id);
 			
-			out.write(ip + "," + inst);
+			out.write(id + "," + inst);
 			out.newLine();
 		}
 		
@@ -309,15 +309,15 @@ public class InstanceDatabase {
 	}
 
 	//Requires loadTrainTest
-	public List<String> getTrainIPs() {
+	public List<String> getTrainIDs() {
 		loadTrainTest();
-		return mIPTrain;
+		return mIDTrain;
 	}
 
 	//Requires loadTrainTest
-	public List<String> getTestIPs() {
+	public List<String> getTestIDs() {
 		loadTrainTest();
-		return mIPTest;
+		return mIDTest;
 	}
 
 	//Requires loadTrainTest
@@ -334,31 +334,31 @@ public class InstanceDatabase {
 
 	public static boolean exists(String path) throws IOException {
 		InstanceDatabase insts = new InstanceDatabase(path);
-		File ip = new File(insts.getIPPath());
+		File id = new File(insts.getIDPath());
 		File arff = new File(insts.getARFFPath());
 		File report = new File(insts.getReportARFFPath());
 
-		return ip.exists() && arff.exists() && report.exists(); 
+		return id.exists() && arff.exists() && report.exists(); 
 	}
 	
 	public static InstanceDatabase load(String path) throws IOException {
 		InstanceDatabase insts = new InstanceDatabase(path);
-		File ip = new File(insts.getIPPath());
+		File id = new File(insts.getIDPath());
 		File arff = new File(insts.getARFFPath());
 		File report = new File(insts.getReportARFFPath());
 		
-		if (!ip.exists()) throw new IOException("Error: " + insts.getIPPath() + " not found.");
+		if (!id.exists()) throw new IOException("Error: " + insts.getIDPath() + " not found.");
 		if (!arff.exists()) throw new IOException("Error: " + insts.getARFFPath() + " not found.");
 		if (!report.exists()) throw new IOException("Error: " + insts.getReportARFFPath() + " not found.");
 		
-		insts.mIPs = FileUtil.readFile(insts.getIPPath());		
+		insts.mIDs = FileUtil.readFile(insts.getIDPath());		
 		return insts;
 	}
 
 	public static InstanceDatabase mergeFeatures(String path, InstanceDatabase ... insts) throws IOException {
 		for (int i = 1; i < insts.length; i++) {
-			if (!insts[0].mIPs.equals(insts[i].mIPs)) {
-				throw new IllegalArgumentException("Error: IP list of " + insts[0].mPath + " and " + insts[i].mPath + " do not match.");
+			if (!insts[0].mIDs.equals(insts[i].mIDs)) {
+				throw new IllegalArgumentException("Error: ID list of " + insts[0].mPath + " and " + insts[i].mPath + " do not match.");
 			}
 		}
 		
@@ -366,35 +366,35 @@ public class InstanceDatabase {
 		WekaPreprocess.mergeARFF(path, WekaPreprocess.ALL_SUFFIX, paths);		
 		WekaPreprocess.mergeARFF(path, WekaPreprocess.REPORT_SUFFIX, paths);		
 		
-		return new InstanceDatabase(path, CUtil.makeList(insts[0].mIPs));
+		return new InstanceDatabase(path, CUtil.makeList(insts[0].mIDs));
 	}
 	
 	public static InstanceDatabase mergeInstances(String path, InstanceDatabase ... insts) throws IOException {
-		List<String> allIPs = checkAndConcatIPs(insts);
+		List<String> allIDs = checkAndConcatIPs(insts);
 		
 		String[] paths = getPaths(insts);
 		WekaPreprocess.concatARFF(path, WekaPreprocess.ALL_SUFFIX, paths);		
 		WekaPreprocess.concatARFF(path, WekaPreprocess.REPORT_SUFFIX, paths);		
 		
-		InstanceDatabase merged = new InstanceDatabase(path, allIPs);
+		InstanceDatabase merged = new InstanceDatabase(path, allIDs);
 		merged.saveIPs();
 		return merged;
 	}
 	
 	private static List<String> checkAndConcatIPs(InstanceDatabase[] insts) {
-		List<String> allIPList = CUtil.makeList();
-		Set<String> allIPs = CUtil.makeSet();
+		List<String> allIDList = CUtil.makeList();
+		Set<String> allIDs = CUtil.makeSet();
 		for (int i = 0; i < insts.length; i++) {
-			for (String ip : insts[i].mIPs) {
-				if (allIPs.contains(ip)) {
-					throw new IllegalArgumentException("Error: Duplicate IP found: " + ip);
+			for (String id : insts[i].mIDs) {
+				if (allIDs.contains(id)) {
+					throw new IllegalArgumentException("Error: Duplicate ID found: " + id);
 				}
 			}
-			allIPs.addAll(insts[i].mIPs);
-			allIPList.addAll(insts[i].mIPs);
+			allIDs.addAll(insts[i].mIDs);
+			allIDList.addAll(insts[i].mIDs);
 		}
 		
-		return allIPList;
+		return allIDList;
 	}
 
 	private static String[] getPaths(InstanceDatabase[] insts) {
@@ -405,7 +405,7 @@ public class InstanceDatabase {
 		return paths;
 	}
 
-	public static String trainToIP(String train) {
+	public static String trainToID(String train) {
 		if (train.startsWith(TRAIN_PREFIX)) {
 			return train.substring(TRAIN_PREFIX.length());
 		} else {
@@ -413,11 +413,11 @@ public class InstanceDatabase {
 		}
 	}
 	
-	public static String ipToTrain(String ip) {
-		if (ip.startsWith(TRAIN_PREFIX)) {
-			return ip;
+	public static String idToTrain(String id) {
+		if (id.startsWith(TRAIN_PREFIX)) {
+			return id;
 		} else {
-			return TRAIN_PREFIX + ip;
+			return TRAIN_PREFIX + id;
 		}
 	}
 

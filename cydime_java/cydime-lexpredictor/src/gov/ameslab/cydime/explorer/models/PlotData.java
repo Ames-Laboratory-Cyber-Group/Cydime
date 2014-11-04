@@ -46,9 +46,9 @@ import gov.ameslab.cydime.util.CSVReader;
 import gov.ameslab.cydime.util.CUtil;
 import gov.ameslab.cydime.util.Config;
 import gov.ameslab.cydime.util.HashMap;
+import gov.ameslab.cydime.util.HashMap.ValueFactory;
 import gov.ameslab.cydime.util.HistogramLong;
 import gov.ameslab.cydime.util.IndexedList;
-import gov.ameslab.cydime.util.HashMap.ValueFactory;
 import gov.ameslab.cydime.util.models.TreeNode;
 
 import java.io.IOException;
@@ -91,11 +91,14 @@ public class PlotData {
 		
 	public void load(DomainDatabase domainDB) throws IOException {
 		mDomainDB = domainDB;
-		mExtIPs = InstanceDatabase.load(Config.INSTANCE.getBasePath()).getIPs();
+		Config.INSTANCE.setFeatureSet(Config.FEATURE_IP_DIR);
+		mExtIPs = InstanceDatabase.load(Config.INSTANCE.getBasePath()).getIDs();
 		mExtIPSet = CUtil.makeSet(mExtIPs);
-    	mIntIPs = InstanceDatabase.load(Config.INSTANCE.getIntBasePath()).getIPs();
-    	
-        loadTable();
+		
+		loadTable();
+		
+		Config.INSTANCE.setFeatureSet(Config.FEATURE_INT_DIR);
+    	mIntIPs = InstanceDatabase.load(Config.INSTANCE.getBasePath()).getIDs();
     }
 	
 	public List<String> getAttributes() {
@@ -170,7 +173,7 @@ public class PlotData {
         	String label = in.get("class");
             String serv = in.get("service");
             String domain = mDomainDB.getDomain(ip);
-            String whois = mDomainDB.getWhois(ip);
+            String whois = mDomainDB.getASN(ip);
             String semantic = in.get(2, "hierarchy_stack");
             String strength = in.get(2, "baseNorm_stack");
             

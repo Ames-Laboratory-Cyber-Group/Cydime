@@ -39,13 +39,8 @@
 
 package gov.ameslab.cydime.model.tree;
 
-import gov.ameslab.cydime.util.CUtil;
-
-import java.io.BufferedWriter;
-import java.io.IOException;
 import java.io.PrintStream;
-import java.util.Map;
-import java.util.Set;
+
 
 /**
  * A tree structure to store hostname (domain) hierarchy.
@@ -57,38 +52,23 @@ public class DomainTree {
 	private TreeNode mRoot;
 	
 	public DomainTree() {
-		mRoot = new TreeNode(null);
+		mRoot = new TreeNode();
 	}
 
-	public void addDomain(String domain, String ip) {
-		mRoot.addDomain(domain, ip);
+	public void addScore(String domain, double score) {
+		mRoot.addScore(domain, score);
 	}
 
-	public Set<String> getIPs(String domain) {
-		Set<String> result = CUtil.makeSet();
-		mRoot.getIPs(domain, result);
-		return result;
+	public double getScore(String domain) {
+		return mRoot.getScore(domain);
+	}
+
+	public void calcStats() {
+		mRoot.calcStats();
 	}
 	
 	public void print(PrintStream out) {
 		mRoot.print(out, 0);
 	}
 
-	public void write(BufferedWriter out) throws IOException {
-		mRoot.write(out, "");
-	}
-
-	public Map<String, String> reduce(int threshold) {
-		mRoot.countDescendentIPs();
-		
-		Map<String, String> replace = CUtil.makeMap();
-		mRoot.reduce(threshold, replace, null);
-		
-		return replace;
-	}
-
-	public int size() {
-		return mRoot.getDescendentNodes();
-	}
-	
 }

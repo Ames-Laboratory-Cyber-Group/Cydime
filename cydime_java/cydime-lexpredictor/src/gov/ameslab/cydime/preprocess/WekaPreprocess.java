@@ -70,7 +70,7 @@ import weka.filters.unsupervised.attribute.StringToNominal;
  */
 public class WekaPreprocess {
 
-	public static final String IP_SUFFIX = ".ip";
+	public static final String ID_SUFFIX = ".id";
 	public static final String ALL_SUFFIX = ".arff";
 	public static final String TRAIN_SUFFIX = ".train.arff";
 	public static final String TEST_SUFFIX = ".test.arff";
