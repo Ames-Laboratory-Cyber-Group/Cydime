@@ -82,12 +82,11 @@ public class PlotData {
     private Set<String> mExtIPSet;
     private List<String> mIntIPs;
     
-    private Map<String, Map<String, Map<String, Set<String>>>> mServDomainWhoisIPs;
+    private Map<String, Map<String, Map<String, Set<String>>>> mServDomainASNIPs;
     private Map<String, String> mDomainParents;
-    private Map<String, String> mWhoisParents;
     private HistogramLong<String> mServiceCount;
     private HistogramLong<String> mDomainCount;
-    private HistogramLong<String> mWhoisCount;
+    private HistogramLong<String> mASNCount;
 		
 	public void load(DomainDatabase domainDB) throws IOException {
 		mDomainDB = domainDB;
@@ -123,7 +122,7 @@ public class PlotData {
 		
 		List<String> ipList = CUtil.makeList();
 		
-		Map<String, Map<String, Set<String>>> servWhoisIPs = mServDomainWhoisIPs.get(service);
+		Map<String, Map<String, Set<String>>> servWhoisIPs = mServDomainASNIPs.get(service);
 		if (servWhoisIPs == null) return ipList;
 		
 		Map<String, Set<String>> whoisIPs = servWhoisIPs.get(domain);
@@ -139,13 +138,12 @@ public class PlotData {
 		System.out.println("Reading plot ...");
 		
         mIPRecord = CUtil.makeMap();
-        mServDomainWhoisIPs = CUtil.makeMap();
+        mServDomainASNIPs = CUtil.makeMap();
         mDomainParents = new TreeMap<String, String>();
-        mWhoisParents = new TreeMap<String, String>();
         
         mServiceCount = new HistogramLong<String>();
         mDomainCount = new HistogramLong<String>();
-        mWhoisCount = new HistogramLong<String>();
+        mASNCount = new HistogramLong<String>();
         
         mAttributes = new IndexedList<String>(
         		"Bytes",
@@ -173,7 +171,7 @@ public class PlotData {
         	String label = in.get("class");
             String serv = in.get("service");
             String domain = mDomainDB.getDomain(ip);
-            String whois = mDomainDB.getASN(ip);
+            String asn = mDomainDB.getASN(ip);
             String semantic = in.get(2, "hierarchy_stack");
             String strength = in.get(2, "baseNorm_stack");
             
@@ -183,8 +181,8 @@ public class PlotData {
             	domain = NOT_AVAILABLE;
             }
             
-            if (whois == null || whois.isEmpty()) {
-            	whois = NOT_AVAILABLE;
+            if (asn == null || asn.isEmpty()) {
+            	asn = NOT_AVAILABLE;
             }
             
             float[] rec = new float[] {
@@ -210,20 +208,19 @@ public class PlotData {
             	mDomainCount.increment(domainPart);
             }
             
-            for (String whoisPart = whois; whoisPart != null; whoisPart = getParent(whoisPart)) {
-            	mWhoisCount.increment(whoisPart);
+            for (String asnPart = asn; asnPart != null; asnPart = getParent(asnPart)) {
+            	mASNCount.increment(asnPart);
             }
             
             for (String servPart = serv; servPart != null; servPart = getParent(servPart)) {
                 for (String domainPart = domain; domainPart != null; domainPart = getParent(domainPart)) {
-                	for (String whoisPart = whois; whoisPart != null; whoisPart = getParent(whoisPart)) {
-                		updateMap(ip, servPart, domainPart, whoisPart);
+                	for (String asnPart = asn; asnPart != null; asnPart = getParent(asnPart)) {
+                		updateMap(ip, servPart, domainPart, asnPart);
                 	}
                 }
             }
             
             updateParents(domain, mDomainParents);
-            updateParents(whois, mWhoisParents);
             
             if (++i % 100000 == 0) {
                 System.out.println((i / 1000) + "k IPs ...");
@@ -261,7 +258,7 @@ public class PlotData {
 	}
 
 	private void updateMap(String ip, String serv, String domain, String whois) {
-		Map<String, Set<String>> whoisIPs = getOrMakeMap(getOrMakeMap(mServDomainWhoisIPs, serv), domain);
+		Map<String, Set<String>> whoisIPs = getOrMakeMap(getOrMakeMap(mServDomainASNIPs, serv), domain);
 		Set<String> ips = whoisIPs.get(whois);
         if (ips == null) {
         	ips = CUtil.makeSet();
@@ -305,23 +302,27 @@ public class PlotData {
 		return getTreeModel(mDomainParents, mDomainCount);
 	}
 
-	public DefaultTreeModel getWhoisTree() {
-		return getTreeModel(mWhoisParents, mWhoisCount);
-	}
-
-	public DefaultTreeModel getServiceTree() {
-		List<String> list = CUtil.makeList(mServiceCount.keySet());
+	public DefaultTreeModel getStarTreeFromCount(HistogramLong<String> count) {
+		List<String> list = CUtil.makeList(count.keySet());
 		list.remove(TREE_ROOT_NAME);
 		Collections.sort(list);
 		
 		TreeNode root = new TreeNode(TREE_ROOT_NAME);
-		root.setCount(mServiceCount.get(TREE_ROOT_NAME));
+		root.setCount(count.get(TREE_ROOT_NAME));
 		for (String node : list) {
 			TreeNode c = new TreeNode(node);
-			c.setCount(mServiceCount.get(node));
+			c.setCount(count.get(node));
 			root.add(c);
 		}
 		return new DefaultTreeModel(root);
+	}
+	
+	public DefaultTreeModel getASNTree() {
+		return getStarTreeFromCount(mASNCount);
+	}
+
+	public DefaultTreeModel getServiceTree() {
+		return getStarTreeFromCount(mServiceCount);
 	}
 	
 	public int getTotalSize() {

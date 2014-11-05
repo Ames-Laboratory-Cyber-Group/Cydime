@@ -99,7 +99,7 @@
                         <Column editable="false" title="Strength Score" type="java.lang.Double"/>
                         <Column editable="false" title="Top Service" type="java.lang.String"/>
                         <Column editable="false" title="Domain" type="java.lang.String"/>
-                        <Column editable="false" title="Whois" type="java.lang.String"/>
+                        <Column editable="false" title="ASN" type="java.lang.String"/>
                         <Column editable="false" title="Country" type="java.lang.String"/>
                         <Column editable="false" title="Records" type="java.lang.Long"/>
                         <Column editable="false" title="Bytes" type="java.lang.Long"/>

@@ -107,7 +107,7 @@ public class CydimeExplorer {
                 updateIPs();
 			}
         });
-        mPlotFrame.loadFilters(mPlotData.getServiceTree(), mPlotData.getDomainTree(), mPlotData.getWhoisTree());
+        mPlotFrame.loadFilters(mPlotData.getServiceTree(), mPlotData.getDomainTree(), mPlotData.getASNTree());
         
         mStatFrame.setExtTimeRange(mStatData.getExtRange());
         mStatFrame.setIntTimeRange(mStatData.getIntRange());

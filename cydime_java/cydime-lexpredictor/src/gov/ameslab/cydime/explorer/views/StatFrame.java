@@ -114,7 +114,7 @@ public class StatFrame extends javax.swing.JFrame {
         chtInt = new info.monitorenter.gui.chart.Chart2D();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setTitle("DWL Explorer");
+        setTitle("Cydime Explorer");
         setPreferredSize(new java.awt.Dimension(1100, 900));
         getContentPane().setLayout(new javax.swing.BoxLayout(getContentPane(), javax.swing.BoxLayout.PAGE_AXIS));
 
@@ -140,7 +140,7 @@ public class StatFrame extends javax.swing.JFrame {
 
             },
             new String [] {
-                "Label", "Predicted", "IP", "Semantic Score", "Strength Score", "Top Service", "Domain", "Whois", "Country", "Records", "Bytes", "Peers", "Src Ports", "Dest Ports", "Daily Regularity", "Weekly Regularity", "Access Hours", "Access Days", "Workhour Ratio"
+                "Label", "Predicted", "IP", "Semantic Score", "Strength Score", "Top Service", "Domain", "ASN", "Country", "Records", "Bytes", "Peers", "Src Ports", "Dest Ports", "Daily Regularity", "Weekly Regularity", "Access Hours", "Access Days", "Workhour Ratio"
             }
         ) {
             Class[] types = new Class [] {
