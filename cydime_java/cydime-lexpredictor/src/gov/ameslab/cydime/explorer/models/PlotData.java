@@ -151,9 +151,7 @@ public class PlotData {
         		"Daily Regularity",
         		"Hourly Bins",
         		"Lexical Sim (Actual)",
-        		"Lexical Sim (Predicted)",
-        		"Semantic (Predicted)",
-        		"Strength (Predicted)"
+        		"Lexical Sim (Predicted)"
         		);
         
         CSVReader in = new CSVReader();
@@ -172,8 +170,6 @@ public class PlotData {
             String serv = in.get("service");
             String domain = mDomainDB.getDomain(ip);
             String asn = mDomainDB.getASN(ip);
-            String semantic = in.get(2, "hierarchy_stack");
-            String strength = in.get(2, "baseNorm_stack");
             
             if (!mExtIPSet.contains(ip)) continue;
             
@@ -191,9 +187,7 @@ public class PlotData {
             		Float.parseFloat(in.get("Bytes_Fourier0")),
             		Float.parseFloat(in.get("access_hours")),
             		(label.equals("?")) ? 0.0f : Float.parseFloat(label),
-                    Float.parseFloat(in.get(3, "score")),
-            		(semantic == null) ? 0.0f : Float.parseFloat(semantic),
-            		(strength == null) ? 0.0f : Float.parseFloat(strength)
+                    Float.parseFloat(in.get(3, "score"))
             };
             
             if (!isAboveThrehold(rec)) continue;

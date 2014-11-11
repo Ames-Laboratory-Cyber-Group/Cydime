@@ -146,17 +146,11 @@ public class CydimePredictor {
 			all.writeReport();
 			
 			baseScore = learnAndPredict(ClassifierFactory.makeREPTree(), all, Config.INSTANCE.getBaseScorePath());
-			
-			//Report
-			InstanceDatabase baseNormCV = stack("baseNorm_stack", baseNorm, ClassifierFactory.makeREPTree());
-			InstanceDatabase predicted = InstanceDatabase.mergeFeatures(Config.INSTANCE.getAllPredictedPath(),
-					hierarchyCV,
-					baseNormCV);
-			predicted.writeReport();			
 		}
 		
 		//Final result
-		writeFinalResult(baseNorm, baseScore);
+		InstanceDatabase base = InstanceDatabase.load(Config.INSTANCE.getBasePath());
+		writeFinalResult(baseNorm, baseScore, base);
 	}
 
 	private InstanceDatabase predictRank(InstanceDatabase base) throws IOException {
@@ -239,25 +233,52 @@ public class CydimePredictor {
 		}
 	}
 	
-	private void writeFinalResult(InstanceDatabase all, InstanceDatabase test) throws IOException {
+	private void writeFinalResult(InstanceDatabase baseNorm, InstanceDatabase baseScore, InstanceDatabase base) throws IOException {
 		BufferedWriter out = new BufferedWriter(new FileWriter(Config.INSTANCE.getFinalResultPath()));
-		out.write("ID,score");
+		out.write("ID,lexical_norm,lexical_predicted,byte,byte_norm,mission_norm,exfiltration_norm");
 		out.newLine();
 		
-		for (String id : all.getIDs()) {
-			out.write(id + ",");
-			
-			if (all.hasLabel(id)) {
-				out.write(String.valueOf(all.getLabel(id)));
+		for (String id : baseNorm.getIDs()) {
+			double lexical = 0.0;
+			boolean isLexicalPredicted = false;
+			if (baseNorm.hasLabel(id)) {
+				lexical = baseNorm.getLabel(id);
 			} else {
-				Instance inst = test.getWekaInstance(id);
-				out.write(String.valueOf(inst.value(0)));
-			}
+				isLexicalPredicted = true;
+				lexical = baseScore.getWekaInstance(id).value(0);
+			}		
+			
+			double bytes = base.getWekaReportInstance(id).value(3);
+			double bytesNorm = baseNorm.getWekaInstance(id).value(3);
+			double mission = getMission(lexical, bytesNorm);
+			double exfiltration = getExfiltration(isLexicalPredicted ? 0.0 : lexical, bytesNorm);
+			
+			out.write(id + ",");
+			out.write(String.valueOf(lexical));
+			out.write(",");
+			out.write(isLexicalPredicted ? "1" : "0");
+			out.write(",");
+			out.write(String.valueOf(bytes));
+			out.write(",");
+			out.write(String.valueOf(bytesNorm));
+			out.write(",");
+			out.write(String.valueOf(mission));
+			out.write(",");
+			out.write(String.valueOf(exfiltration));
 			out.newLine();
 		}
 		out.close();
 	}
 
+	private double getMission(double lexical, double bytesNorm) {
+		return Math.sqrt(lexical * lexical + bytesNorm * bytesNorm);
+	}
+
+	private double getExfiltration(double lexical, double bytesNorm) {
+		lexical = 1.0 - lexical;
+		return Math.sqrt(lexical * lexical + bytesNorm * bytesNorm);
+	}
+	
 	private InstanceDatabase learnAndPredict(AbstractClassifier c, InstanceDatabase input, String output) throws Exception {
 		Log.log(Level.INFO, "Learning {0} ...", output);
 		

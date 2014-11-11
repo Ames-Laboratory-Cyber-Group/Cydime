@@ -337,26 +337,6 @@ public class CydimePreprocessor {
 	}
 
 	private void loadLabelsForIP(InstanceDatabase base) throws IOException {
-//		double min = Double.MAX_VALUE;
-//		double max = -Double.MAX_VALUE;
-//		
-//		for (String id : base.getIDs()) {
-//			double sim = mDomainDB.getScore(id);
-//			if (Double.isNaN(sim)) continue;
-//			
-//			if (sim < min) {
-//				min = sim;
-//			}
-//			if (sim > max) {
-//				max = sim;
-//			}
-//		}
-//		
-//		if (max - min <= 0.0) {
-//			Log.log(Level.SEVERE, "Mission similarities have 0 range.");
-//			return;
-//		}
-		
 		for (String id : base.getIDs()) {
 			double sim = mDomainDB.getScore(id);
 			if (Double.isNaN(sim)) continue;
@@ -367,26 +347,6 @@ public class CydimePreprocessor {
 	}
 
 	private void loadLabelsForASN(InstanceDatabase base) throws IOException {
-//		double min = Double.MAX_VALUE;
-//		double max = -Double.MAX_VALUE;
-//		
-//		for (String id : base.getIDs()) {
-//			double sim = mDomainDB.getAverageScoreForASN(id);
-//			if (Double.isNaN(sim)) continue;
-//			
-//			if (sim < min) {
-//				min = sim;
-//			}
-//			if (sim > max) {
-//				max = sim;
-//			}
-//		}
-//		
-//		if (max - min <= 0.0) {
-//			Log.log(Level.SEVERE, "Mission similarities have 0 range.");
-//			return;
-//		}
-		
 		for (String id : base.getIDs()) {
 			double sim = mDomainDB.getAverageScoreForASN(id);
 			if (Double.isNaN(sim)) continue;
