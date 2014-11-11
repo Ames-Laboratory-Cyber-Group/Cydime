@@ -39,7 +39,7 @@ def calc_date(start, end, i):
     '''
     today = date.today()
 
-    end_date = end if end else today
+    end_date = datetime.strptime(end, '%Y/%m/%d') if end else today
     date_list = [str(end_date-timedelta(x)).replace('-', '/').split(' ')[0] for x in xrange(0, Conf.days_to_analyze)]
     start_date = date_list[-1]
     end_date = str(end_date).replace('-', '/').split(' ')[0]
