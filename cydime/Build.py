@@ -20,6 +20,9 @@ def create_daily_dirs(path):
     '''
     Com.create_directory(path + '/filter')
     Com.create_directory(path + '/features')
+    Com.create_directory(path + '/features/ip')
+    Com.create_directory(path + '/features/asn')
+    Com.create_directory(path + '/features/int')
     Com.create_directory(path + '/preprocess')
     Com.create_directory(path + '/report')
     Com.create_directory(path + '/model')

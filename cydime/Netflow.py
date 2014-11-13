@@ -43,7 +43,7 @@ class NetflowStatFeature(CydimeFeature):
 
     prefix      = 'default/build/'
     script_name = prefix + 'netflow'
-    output_file = 'features/netflow.ext.features'
+    output_file = 'features/ip/netflow.features'
 
     def __init__(self, *args, **kwargs):
         super(NetflowStatFeature, self).__init__(self.output_file, 
@@ -58,7 +58,7 @@ class PairServicesFeature(CydimeFeature):
 
     prefix      = 'default/build/'
     script_name = prefix + 'pair_services'
-    output_file = 'features/pair_services.features'
+    output_file = 'features/ip/pair_services.features'
     
     def __init__(self, *args, **kwargs):
         super(PairServicesFeature, self).__init__(self.output_file, 
@@ -80,7 +80,7 @@ class ServicesFeature(CydimeFeature):
 
     prefix      = 'default/build/'
     script_name = prefix + 'services'
-    output_file = 'features/services.ext.features'
+    output_file = 'features/ip/services.features'
     
     def __init__(self, *args, **kwargs):
         super(ServicesFeature, self).__init__(self.output_file, 
@@ -103,7 +103,7 @@ class TimeseriesFeature(CydimeFeature):
     prefix          = 'default/build/'
     script_name     = prefix + 'timeseries'
     partition_size  = '3600'
-    output_file     = 'features/timeseries.ext.features'
+    output_file     = 'features/ip/timeseries.features'
     
     def __init__(self, *args, **kwargs):
         super(TimeseriesFeature, self).__init__(self.output_file, 
@@ -125,7 +125,7 @@ class ArrivalRecordFeature(CydimeFeature):
 
     prefix      = 'default/build/'
     script_name = prefix + 'arrival_record'
-    output_file = 'features/arrival_record.ext.features'
+    output_file = 'features/ip/arrival_record.features'
     
     def __init__(self, *args, **kwargs):
         super(ArrivalRecordFeature, self).__init__(self.output_file, 
@@ -147,7 +147,7 @@ class LabelerDataFeature(CydimeFeature):
 
     prefix      = 'default/build/'
     script_name = prefix + 'labeler_data'
-    output_file = 'features/services_timeseries.ext.features'
+    output_file = 'features/ip/services_timeseries.features'
     partition_size  = '3600'
     
     def __init__(self, *args, **kwargs):
@@ -169,7 +169,7 @@ class InternalNetflowFeature(CydimeFeature):
 
     prefix      = 'default/build/'
     script_name = prefix + 'internal_netflow'
-    output_file = 'features/netflow.int.features'
+    output_file = 'features/int/netflow.features'
     
     def __init__(self, *args, **kwargs):
         super(InternalNetflowFeature, self).__init__(self.output_file, 
@@ -182,7 +182,7 @@ class InternalServicesFeature(CydimeFeature):
 
     prefix      = 'default/build/'
     script_name = prefix + 'internal_services'
-    output_file = 'features/services.int.features'
+    output_file = 'features/int/services.features'
     
     def __init__(self, *args, **kwargs):
         super(InternalServicesFeature, self).__init__(self.output_file, 
@@ -204,7 +204,7 @@ class InternalTimeseriesFeature(CydimeFeature):
     prefix          = 'default/build/'
     script_name     = prefix + 'internal_timeseries'
     partition_size  = '3600'
-    output_file     = 'features/timeseries.int.features'
+    output_file     = 'features/int/timeseries.features'
     
     def __init__(self, *args, **kwargs):
         super(InternalTimeseriesFeature, self).__init__(self.output_file, 
@@ -225,7 +225,7 @@ class InternalLabelerDataFeature(CydimeFeature):
 
     prefix      = 'default/build/'
     script_name = prefix + 'internal_labeler_data'
-    output_file = 'features/services_timeseries.int.features'
+    output_file = 'features/int/services_timeseries.features'
     partition_size  = '3600'
     
     def __init__(self, *args, **kwargs):
@@ -249,7 +249,7 @@ class FullNetflowFeature(CydimeFeature):
 
     prefix      = 'default/build/'
     script_name = prefix + 'netflow'
-    output_file = 'features/full_netflow.ext.features'
+    output_file = 'features/ip/full_netflow.features'
 
     def __init__(self, *args, **kwargs):
         super(FullNetflowFeature, self).__init__(self.output_file, 
@@ -264,7 +264,7 @@ class InternalFullNetflowFeature(CydimeFeature):
 
     prefix      = 'default/build/'
     script_name = prefix + 'internal_netflow'
-    output_file = 'features/full_netflow.int.features'
+    output_file = 'features/int/full_netflow.features'
     
     def __init__(self, *args, **kwargs):
         super(InternalFullNetflowFeature, self).__init__(self.output_file, 
@@ -275,7 +275,7 @@ class PairServicesTimeseriesFeature(CydimeFeature):
 
     prefix      = 'default/build/'
     script_name = prefix + 'pair_services_timeseries'
-    output_file = 'features/pair_services_timeseries.ext.features'
+    output_file = 'features/ip/pair_services_timeseries.features'
     partition_size  = '14400'
     
     def __init__(self, *args, **kwargs):
