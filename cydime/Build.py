@@ -18,14 +18,16 @@ def create_daily_dirs(path):
     :param path: full path to daily build directory
     :type path: str
     '''
+    extensions = ('ip', 'asn', 'int')
+
     Com.create_directory(path + '/filter')
-    Com.create_directory(path + '/features')
-    Com.create_directory(path + '/features/ip')
-    Com.create_directory(path + '/features/asn')
-    Com.create_directory(path + '/features/int')
-    Com.create_directory(path + '/preprocess')
-    Com.create_directory(path + '/report')
-    Com.create_directory(path + '/model')
+
+    for p in ('features', 'preprocess', 'report', 'model'):
+        full_path = path + '/' + p
+        Com.create_directory(full_path)
+        for ext in extensions:
+            Com.create_directory(full_path + '/' + ext)
+
 
 def calc_date(end, interval):
     '''Return (date_list, start_date, end_date, todays_date) tuple.
