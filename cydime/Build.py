@@ -3,8 +3,11 @@ import sys
 
 from datetime import date, datetime, timedelta
 
+import ASNMap
 import Config as Conf
 import Common as Com
+import HostMap
+
 from Errors import CydimeDatabaseException
 from Database import insert_scores
 from FeatureInterface import build_installed_features
@@ -83,6 +86,16 @@ def build(end, interval=None, update=True, mail=False, initial=False):
                                  full_path + '/filter/out.silkFilter')
         logging.info('Features built for {0}'.format(end_date))
 
+        # do asn lookups (read from full netflow)
+        # args: ip fileame, asn filename, output filename
+        ASNMap.build_asn_map(full_path + '/features/ip/full_netflow.features',
+                             '/cydime_data/maps/GeoIPASNum2.csv', 
+                             full_path + '/preprocess/ipASNMap.csv')
+        # do hostname lookups (read from full netflow)
+        # args: ipFile, outFile
+        HostMap.buildHostMap(full_path + '/features/ip/test',
+                             full_path + '/preprocess/ipHostMap.csv')
+        # build asn features
         # we're done if this is an initial build
         if initial:
             return
