@@ -91,10 +91,12 @@ def build(end, interval=None, update=True, mail=False, initial=False):
         ASNMap.build_asn_map(full_path + '/features/ip/full_netflow.features',
                              '/cydime_data/maps/GeoIPASNum2.csv', 
                              full_path + '/preprocess/ipASNMap.csv')
+        logging.info('AS map built for {0}'.format(end_date))
         # do hostname lookups (read from full netflow)
         # args: ipFile, outFile
-        HostMap.buildHostMap(full_path + '/features/ip/test',
+        HostMap.buildHostMap(full_path + '/features/ip/full_netflow.features',
                              full_path + '/preprocess/ipHostMap.csv')
+        logging.info('Host map built for {0}'.format(end_date))
         # build asn features
         # we're done if this is an initial build
         if initial:

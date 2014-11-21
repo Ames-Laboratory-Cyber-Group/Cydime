@@ -11,7 +11,10 @@ def writeResult(result, address, outFile):
     answers, authority, additional = result
     if answers:
         a = answers[0]
-        outFile.write('{0},{1}\n'.format(address, a.payload.name))
+        if len(str(a.payload.name)) == 0:
+            outFile.write('{0},NA\n'.format(address))
+        else:
+            outFile.write('{0},{1}\n'.format(address, a.payload.name))
 
 
 def lookupFailed(reason, address, outFile):
