@@ -54,15 +54,15 @@ if args.build:
 
     parser = CydimeParser()
     parser.add_argument('-b', '--build', action='store_true', required=True)
-    parser.add_argument('-s', '--start-date', action='store', default=past_date)
     parser.add_argument('-e', '--end-date', action='store', default=current_date)
+    parser.add_argument('-i', '--interval', action='store', default=Conf.days_to_analyze)
     parser.add_argument('-u', '--update', action='store_true', default=False)
     parser.add_argument('-n', '--initial', action='store_true', default=False)
     parser.add_argument('-m', '--mail', action='store_true', default=False)
 
     args = parser.parse_args()
 
-    Build.build(args.start_date, args.end_date, Conf.days_to_analyze,
+    Build.build(args.end_date, Conf.days_to_analyze,
                 args.update, args.mail, args.initial)
 
 elif args.explore:
@@ -91,7 +91,7 @@ elif args.filter:
 
     args = parser.parse_args()
 
-    commnad = '{0}/filter-all -s {1} -e {2} -d {3} -t {4}'\
+    command = '{0}/filter-all -s {1} -e {2} -d {3} -t {4}'\
         .format(Conf.bin_dir, args.start_date, args.end_date,\
                 args.pass_directory, args.threads)
     p = Popen(command, stdout=PIPE, stderr=PIPE, shell=True)

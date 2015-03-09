@@ -3,8 +3,11 @@ import sys
 
 from datetime import date, datetime, timedelta
 
+import ASNMap
 import Config as Conf
 import Common as Com
+import HostMap
+
 from Errors import CydimeDatabaseException
 from Database import insert_scores
 from FeatureInterface import build_installed_features
@@ -18,39 +21,39 @@ def create_daily_dirs(path):
     :param path: full path to daily build directory
     :type path: str
     '''
-    Com.create_directory(path + '/filter')
-    Com.create_directory(path + '/features')
-    Com.create_directory(path + '/preprocess')
-    Com.create_directory(path + '/report')
-    Com.create_directory(path + '/model')
+    extensions = ('ip', 'asn', 'int')
 
-def calc_date(start, end, i):
+    Com.create_directory(path + '/filter')
+
+    for p in ('features', 'preprocess', 'report', 'model'):
+        full_path = path + '/' + p
+        Com.create_directory(full_path)
+        for ext in extensions:
+            Com.create_directory(full_path + '/' + ext)
+
+
+def calc_date(end, interval):
     '''Return (date_list, start_date, end_date, todays_date) tuple.
 
-    :param start: starting filter date (earliest day)
-    :type start: str
     :param end: ending filter date (latest day)
     :type end: str
-    :param i: interval over which we filter (in days)
-    :type i: int
-    :returns: tuple(list, str, str, datetime.date) -- list of YYYY/MM/DD dates 
-        to include in the filter, start_date as string, end_date as string, 
-        today's date as datetime.date object
+    :param interval: interval over which we filter (in days)
+    :type interval: int
+    :returns: tuple(list, datetime.date) -- list of YYYY/MM/DD dates 
+        to include in the filter, today's date as datetime.date object
     '''
     today = date.today()
 
-    end_date = end if end else today
-    date_list = [str(end_date-timedelta(x)).replace('-', '/').split(' ')[0] for x in xrange(0, Conf.days_to_analyze)]
-    start_date = date_list[-1]
-    end_date = str(end_date).replace('-', '/').split(' ')[0]
+    if isinstance(end, str):
+        end = datetime.strptime(end, '%Y/%m/%d')
 
-    return (date_list, start_date, end_date, today)
+    date_list = [str(end-timedelta(x)).replace('-', '/').split(' ')[0] for x in xrange(0, interval)]
 
-def build(start=None, end=None, interval=None, update=True, mail=False, initial=False):
+    return (date_list, date.today())
+
+def build(end, interval=None, update=True, mail=False, initial=False):
     '''Run a daily build.
 
-    :param start: starting filter date (earliest day)
-    :type start: datetime.date
     :param end: ending filter date (latest day)
     :type end: datetime.date
     :param interval: interval over which we filter (in days)
@@ -65,9 +68,12 @@ def build(start=None, end=None, interval=None, update=True, mail=False, initial=
     '''
 
     try:
-        date_list, start_date, end_date, current_date = calc_date(start, end, interval)
+        date_list, current_date = calc_date(end, interval)
+        start_date = str(date_list[-1]).replace('-', '/').split(' ')[0]
+        end_date = str(date_list[0]).replace('-', '/').split(' ')[0]
 
         full_path = Conf.data_dir + '/' + end_date
+
         create_daily_dirs(full_path)
 
         filter_records(full_path, start_date, end_date, date_list)
@@ -80,6 +86,18 @@ def build(start=None, end=None, interval=None, update=True, mail=False, initial=
                                  full_path + '/filter/out.silkFilter')
         logging.info('Features built for {0}'.format(end_date))
 
+        # do asn lookups (read from full netflow)
+        # args: ip fileame, asn filename, output filename
+        ASNMap.build_asn_map(full_path + '/features/ip/full_netflow.features',
+                             '/cydime_data/maps/GeoIPASNum2.csv', 
+                             full_path + '/preprocess/ipASNMap.csv')
+        logging.info('AS map built for {0}'.format(end_date))
+        # do hostname lookups (read from full netflow)
+        # args: ipFile, outFile
+        HostMap.buildHostMap(full_path + '/features/ip/full_netflow.features',
+                             full_path + '/preprocess/ipHostMap.csv')
+        logging.info('Host map built for {0}'.format(end_date))
+        # build asn features
         # we're done if this is an initial build
         if initial:
             return
@@ -114,9 +132,6 @@ if __name__ == '__main__':
     from datetime import datetime
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--start', 
-                        help='starting filter date in yyyy/mm/dd format.\n'
-                        + 'defaults to yesterday.')
     parser.add_argument('-e', '--end',
                         help='ending filter date in yyyy/mm/dd format.\n'
                         + 'defaults to today.')
@@ -131,25 +146,17 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
-        if args.start:
-            args.start = datetime.strptime(args.start.replace('/', '-'), '%Y-%m-%d')
-    except ValueError:
-        raise ValueError('Incorrectly formatted start date.')
-
-    try:
         if args.end:
             args.end = datetime.strptime(args.end.replace('/', '-'), '%Y-%m-%d')
     except ValueError:
         raise ValueError('Incorrectly formatted end date.')
 
-    if not args.start:
-        args.start = date.today() - timedelta(1)
     if not args.end:
         args.end = date.today()
     if not args.interval:
-        args.interval = 14
+        args.interval = Conf.days_to_analyze
     else:
         args.interval = int(args.interval)
 
-    build(args.start, args.end, args.interval, args.update == 'True', True,
+    build(args.end, args.interval, args.update == 'True', True,
             args.initial != None)
