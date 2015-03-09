@@ -56,6 +56,8 @@ public class FeatureSet {
 	protected String[] mFeaturePaths;
 	protected String[] mPreprocessPaths;
 
+	protected FeatureSet() {}
+	
 	public FeatureSet(List<String> ids, String inPath, String outPath) {
 		mIDs = ids;
 		mCurrentInPath = Config.INSTANCE.getCurrentFeaturePath() + inPath;

@@ -120,7 +120,7 @@ public class DomainDatabase {
 		while ((line = in.readLine()) != null) {
 			String[] split = line.split(",");
 			String host = split[0];
-			double sim = Double.parseDouble(split[1]);
+			double sim = Double.parseDouble(split[4]);
 			mDomainTree.addScore(host, sim);
 		}
 		in.close();

@@ -42,6 +42,7 @@ package gov.ameslab.cydime.preprocess;
 import gov.ameslab.cydime.model.DomainDatabase;
 import gov.ameslab.cydime.model.InstanceDatabase;
 import gov.ameslab.cydime.preprocess.community.BiGraph;
+import gov.ameslab.cydime.preprocess.community.InfluenceGraph;
 import gov.ameslab.cydime.preprocess.dailyprofile.DailyProfile;
 import gov.ameslab.cydime.preprocess.dailyprofile.DailyProfile.Normalizer;
 import gov.ameslab.cydime.preprocess.hierarchy.Hostname;
@@ -195,6 +196,7 @@ public class CydimePreprocessor {
 		InstanceDatabase ta = new TimeAccess(mIDs, Config.INSTANCE.getTimeSeries(), Config.INSTANCE.getTimeAccess()).run();
 		InstanceDatabase dpService = new DailyProfile(mIDs, Config.INSTANCE.getDailyProfile(), Config.INSTANCE.getDailyProfile()).run(Normalizer.SERVICE_SUM);
 		InstanceDatabase dpTime = new DailyProfile(mIDs, Config.INSTANCE.getDailyProfile(), Config.INSTANCE.getDailyProfile()).run(Normalizer.TIME_SUM);
+		InstanceDatabase influence = new InfluenceGraph(mIDs, Config.INSTANCE.getPairService(), Config.INSTANCE.getPairService()).run();
 		
 		InstanceDatabase base = InstanceDatabase.mergeFeatures(Config.INSTANCE.getBasePath(),
 				service,
@@ -202,7 +204,8 @@ public class CydimePreprocessor {
 				ts,
 				ta,
 				dpService,
-				dpTime
+				dpTime,
+				influence
 				);		
 		service = null;
 		netflow = null;
@@ -210,6 +213,7 @@ public class CydimePreprocessor {
 		ta = null;
 		dpService = null;
 		dpTime = null;
+		influence = null;
 		
 		mDomainDB.loadTree();
 		InstanceDatabase hierarchy = new Hostname(mIDs, Config.INSTANCE.getHierarchy(), Config.INSTANCE.getHierarchy(), mDomainDB, Unit.ASN).run();

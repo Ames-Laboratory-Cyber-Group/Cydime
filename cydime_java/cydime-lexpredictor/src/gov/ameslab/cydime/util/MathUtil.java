@@ -210,6 +210,16 @@ public class MathUtil {
 		}
 		return max;
 	}
+
+	private static double max(double[] a, int begin, int end) {
+		double max = a[begin];
+		for (int i = begin + 1; i < end; i++) {
+			if (a[i] > max) {
+				max = a[i];
+			}
+		}
+		return max;
+	}
 	
 	public static void divide(double[] a, double sum) {
 		for (int i = 0; i < a.length; i++) {
@@ -353,4 +363,18 @@ public class MathUtil {
 		return a;
 	}
 
+	public static double sumLog(double[] logs) {
+		return sumLog(logs, 0, logs.length);
+	}
+
+	public static double sumLog(double[] logs, int begin, int end) {
+		double max = max(logs, begin, end);
+		double norm = 0.0;
+		for (int i = begin; i < end; i++) {
+			norm += Math.exp(logs[i] - max);
+		}
+		norm = Math.log(norm) + max;
+		return norm;
+	}
+	
 }

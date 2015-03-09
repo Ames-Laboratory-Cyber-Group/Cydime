@@ -44,7 +44,6 @@ import gov.ameslab.cydime.util.CUtil;
 import java.io.PrintStream;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 /**
  * @author Harris Lin (harris.lin.nz at gmail.com)
