@@ -226,7 +226,7 @@ public class StatData {
         in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_REPORT_SUFFIX);
         int i = 0;
         while (in.readLine()) {
-            String ip = in.get("IP");
+            String ip = in.get("ID");
             
             if (!mIntIPSet.contains(ip)) continue;
             
