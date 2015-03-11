@@ -282,10 +282,6 @@ public class Config {
 	
 	//getReportPath
 	public String getFinalResultPath() {	return getCurrentReportPath() + "cydime.scores";	}
-	public String getLexicalSimPath() {	return getCurrentReportPath() + "lexical_sim";	}
-	public String getSemanticPath() {	return getCurrentReportPath() + "semantic";	}
-	public String getStrengthPath() {	return getCurrentReportPath() + "strength";	}
-	public String getAllPredictedPath() {	return getCurrentReportPath() + "predicted";	}
 	
 	public String getSilkServicePath() {	return getPath(SILK_SERVICE_DIR) + "services.txt";	}
 

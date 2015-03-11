@@ -155,21 +155,19 @@ public class PlotData {
         		);
         
         CSVReader in = new CSVReader();
-//        IP,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
+//        ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
         in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_SUFFIX);
-//        IP,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
+//        ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
         in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_REPORT_SUFFIX);
-//        IP,hierarchy_stack,baseNorm_stack,class
-        in.add(Config.INSTANCE.getAllPredictedPath() + WekaPreprocess.CSV_SUFFIX);
-//        IP,score
+//        ID,lexical_norm,lexical_predicted,byte,byte_norm,mission_norm,exfiltration_norm
         in.add(Config.INSTANCE.getFinalResultPath());
         int i = 0;
         while (in.readLine()) {
-        	String ip = in.get("IP");
+        	String ip = in.get("ID");
         	String label = in.get("class");
             String serv = in.get("service");
             String domain = mDomainDB.getDomain(ip);
-            String asn = mDomainDB.getASN(ip);
+            String asn = mDomainDB.getASNNameOrNumber(ip);
             
             if (!mExtIPSet.contains(ip)) continue;
             
@@ -187,34 +185,34 @@ public class PlotData {
             		Float.parseFloat(in.get("Bytes_Fourier0")),
             		Float.parseFloat(in.get("access_hours")),
             		(label.equals("?")) ? 0.0f : Float.parseFloat(label),
-                    Float.parseFloat(in.get(3, "score"))
+                    Float.parseFloat(in.get(2, "lexical_norm"))
             };
             
             if (!isAboveThrehold(rec)) continue;
             
             mIPRecord.put(ip, rec);
             
-            for (String servPart = serv; servPart != null; servPart = getParent(servPart)) {
+            for (String servPart = serv; servPart != null; servPart = getParent(servPart, null)) {
             	mServiceCount.increment(servPart);
             }
             
-            for (String domainPart = domain; domainPart != null; domainPart = getParent(domainPart)) {
+            for (String domainPart = domain; domainPart != null; domainPart = getParent(domainPart, ".")) {
             	mDomainCount.increment(domainPart);
             }
             
-            for (String asnPart = asn; asnPart != null; asnPart = getParent(asnPart)) {
+            for (String asnPart = asn; asnPart != null; asnPart = getParent(asnPart, null)) {
             	mASNCount.increment(asnPart);
             }
             
-            for (String servPart = serv; servPart != null; servPart = getParent(servPart)) {
-                for (String domainPart = domain; domainPart != null; domainPart = getParent(domainPart)) {
-                	for (String asnPart = asn; asnPart != null; asnPart = getParent(asnPart)) {
+            for (String servPart = serv; servPart != null; servPart = getParent(servPart, null)) {
+                for (String domainPart = domain; domainPart != null; domainPart = getParent(domainPart, ".")) {
+                	for (String asnPart = asn; asnPart != null; asnPart = getParent(asnPart, null)) {
                 		updateMap(ip, servPart, domainPart, asnPart);
                 	}
                 }
             }
             
-            updateParents(domain, mDomainParents);
+            updateParents(domain, mDomainParents, ".");
             
             if (++i % 100000 == 0) {
                 System.out.println((i / 1000) + "k IPs ...");
@@ -226,24 +224,26 @@ public class PlotData {
     }
     
 	private boolean isAboveThrehold(float[] rec) {
-//		return true;
-		double sqrt = Math.sqrt(rec[0] * rec[0] + rec[5] * rec[5]);
-		return sqrt > SIGNIFICANCE_THRESHOLD;
+		return true;
+//		double sqrt = Math.sqrt(rec[0] * rec[0] + rec[5] * rec[5]);
+//		return sqrt > SIGNIFICANCE_THRESHOLD;
 	}
 
-	private void updateParents(String path, Map<String, String> parents) {
-    	String parent = getParent(path);
+	private void updateParents(String path, Map<String, String> parents, String delim) {
+    	String parent = getParent(path, delim);
     	while (parent != null) {
     		parents.put(path, parent);
     		path = parent;
-    		parent = getParent(path);
+    		parent = getParent(path, delim);
     	}
 	}
 
-	private String getParent(String part) {
+	private String getParent(String part, String delim) {
 		if (TREE_ROOT_NAME.equals(part)) return null;
 		
-		int dot = part.indexOf(".");
+		if (delim == null) return TREE_ROOT_NAME;
+		
+		int dot = part.indexOf(delim);
 		if (dot < 0) {
 			return TREE_ROOT_NAME;
 		} else {

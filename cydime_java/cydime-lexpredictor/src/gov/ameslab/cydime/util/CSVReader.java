@@ -44,12 +44,16 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Harris Lin (harris.lin.nz at gmail.com)
  */
 public class CSVReader {
 
+	private static final Logger Log = Logger.getLogger(CSVReader.class.getName());
+	
 	private List<BufferedReader> mReaders;
 	private List<IndexedList<String>> mHeaders;
 	private List<String[]> mCurrentLines;
@@ -75,6 +79,8 @@ public class CSVReader {
 			
 			return true;
 		} else {
+			Log.log(Level.INFO, "File not found: {0}", file);
+			
 			mReaders.add(null);
 			return false;
 		}

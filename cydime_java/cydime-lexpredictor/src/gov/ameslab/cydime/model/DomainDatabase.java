@@ -63,12 +63,14 @@ public class DomainDatabase {
 	
 	private Map<String, String> mIPDomainMap;
 	private Map<String, String> mIPASNMap;
+	private Map<String, String> mIPASNNameMap;
 	private MapSet<String, String> mASNIPSet;
 	private DomainTree mDomainTree;
 	
 	public DomainDatabase() {
 		mIPDomainMap = CUtil.makeMap();
 		mIPASNMap = CUtil.makeMap();
+		mIPASNNameMap = CUtil.makeMap();
 		mASNIPSet = new MapSet<String, String>();
 	}
 
@@ -105,6 +107,10 @@ public class DomainDatabase {
 			String ip = split[0];
 			if (!NA.equals(split[1])) {
 				db.mIPASNMap.put(ip, split[1]);
+				if (split.length >= 3) {
+					db.mIPASNNameMap.put(ip, split[2]);
+				}
+				
 				db.mASNIPSet.add(split[1], ip);
 			}
 		}
@@ -138,6 +144,18 @@ public class DomainDatabase {
 	
 	public String getASN(String ip) {
 		return mIPASNMap.get(ip);
+	}
+	
+	public String getASNName(String ip) {
+		return mIPASNNameMap.get(ip);
+	}
+	
+	public String getASNNameOrNumber(String ip) {
+		if (mIPASNNameMap.containsKey(ip)) {
+			return mIPASNNameMap.get(ip);
+		} else {
+			return mIPASNMap.get(ip);
+		}		
 	}
 	
 	public double getScore(String ip) {

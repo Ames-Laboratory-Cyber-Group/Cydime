@@ -140,14 +140,14 @@ public class StatFrame extends javax.swing.JFrame {
 
             },
             new String [] {
-                "Label", "Predicted", "IP", "Semantic Score", "Strength Score", "Top Service", "Domain", "ASN", "Country", "Records", "Bytes", "Peers", "Src Ports", "Dest Ports", "Daily Regularity", "Weekly Regularity", "Access Hours", "Access Days", "Workhour Ratio"
+                "Label", "Predicted", "IP", "Top Service", "Domain", "ASN", "Country", "Records", "Bytes", "Peers", "Src Ports", "Dest Ports", "Daily Regularity", "Weekly Regularity", "Access Hours", "Access Days", "Workhour Ratio"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.Double.class, java.lang.Double.class, java.lang.String.class, java.lang.Double.class, java.lang.Double.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.Long.class, java.lang.Long.class, java.lang.Long.class, java.lang.Long.class, java.lang.Long.class, java.lang.Double.class, java.lang.Double.class, java.lang.Long.class, java.lang.Long.class, java.lang.Double.class
+                java.lang.Double.class, java.lang.Double.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.Long.class, java.lang.Long.class, java.lang.Long.class, java.lang.Long.class, java.lang.Long.class, java.lang.Double.class, java.lang.Double.class, java.lang.Long.class, java.lang.Long.class, java.lang.Double.class
             };
             boolean[] canEdit = new boolean [] {
-                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false
+                false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false
             };
 
             public Class getColumnClass(int columnIndex) {
@@ -162,11 +162,13 @@ public class StatFrame extends javax.swing.JFrame {
         tblExt.getTableHeader().setReorderingAllowed(false);
         jScrollPane3.setViewportView(tblExt);
         tblExt.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        tblExt.getColumnModel().getColumn(0).setPreferredWidth(40);
-        tblExt.getColumnModel().getColumn(1).setPreferredWidth(40);
-        tblExt.getColumnModel().getColumn(2).setPreferredWidth(150);
-        tblExt.getColumnModel().getColumn(6).setPreferredWidth(300);
-        tblExt.getColumnModel().getColumn(7).setPreferredWidth(200);
+        if (tblExt.getColumnModel().getColumnCount() > 0) {
+            tblExt.getColumnModel().getColumn(0).setPreferredWidth(40);
+            tblExt.getColumnModel().getColumn(1).setPreferredWidth(40);
+            tblExt.getColumnModel().getColumn(2).setPreferredWidth(150);
+            tblExt.getColumnModel().getColumn(4).setPreferredWidth(300);
+            tblExt.getColumnModel().getColumn(5).setPreferredWidth(200);
+        }
 
         jSplitPane3.setTopComponent(jScrollPane3);
         jSplitPane3.setRightComponent(chtExt);
@@ -219,7 +221,9 @@ public class StatFrame extends javax.swing.JFrame {
         tblInt.getTableHeader().setReorderingAllowed(false);
         jScrollPane1.setViewportView(tblInt);
         tblInt.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        tblInt.getColumnModel().getColumn(0).setPreferredWidth(150);
+        if (tblInt.getColumnModel().getColumnCount() > 0) {
+            tblInt.getColumnModel().getColumn(0).setPreferredWidth(150);
+        }
 
         jSplitPane2.setTopComponent(jScrollPane1);
         jSplitPane2.setRightComponent(chtInt);

@@ -161,23 +161,19 @@ public class StatData {
         mExtIPRecord = CUtil.makeMap();
         
         CSVReader in = new CSVReader();
-//        IP,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
+//        ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
         in.add(Config.INSTANCE.getBasePath() + WekaPreprocess.CSV_REPORT_SUFFIX);
-//        IP,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
+//        ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
         in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_SUFFIX);
-//        IP,hierarchy_stack,baseNorm_stack,class
-        in.add(Config.INSTANCE.getAllPredictedPath() + WekaPreprocess.CSV_SUFFIX);
-//      IP,score
+//        ID,lexical_norm,lexical_predicted,byte,byte_norm,mission_norm,exfiltration_norm
         in.add(Config.INSTANCE.getFinalResultPath());
         int i = 0;
         while (in.readLine()) {
-        	String ip = in.get("IP");
+        	String ip = in.get("ID");
         	String label = in.get("class");
             String serv = in.get("service");
             String domain = mDomainDB.getDomain(ip);
-            String asn = mDomainDB.getASN(ip);
-            String semantic = in.get(2, "hierarchy_stack");
-            String strength = in.get(2, "baseNorm_stack");
+            String asn = mDomainDB.getASNNameOrNumber(ip);
             
             if (!mExtIPSet.contains(ip)) continue;
             
@@ -191,10 +187,8 @@ public class StatData {
             
             Object[] rec = new Object[] {
             		(label.equals("?")) ? null : Double.parseDouble(label),  //label
-                    Double.parseDouble(in.get(3, "score")),
+                    Double.parseDouble(in.get(2, "lexical_norm")),
             		ip, //IP
-            		(semantic == null) ? null : Double.parseDouble(semantic),
-            		(strength == null) ? null : Double.parseDouble(strength),
             		serv, //service
             		domain, //domain
             		asn, //asn
