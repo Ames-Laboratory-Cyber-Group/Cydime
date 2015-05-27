@@ -142,7 +142,7 @@ def silk_in_filter_single(full_path, start_date, end_date):
 
     in_dst = full_path + '/filter/' + 'in.silkFilter'
     command = 'rwfilter --start-date={0} --end-date={1} --type=all '\
-              .format(start_date + ':' + str(Conf.hour_to_run), end_date + ':' + str(Conf.hour_to_run))
+              .format(start_date + ':' + str(Conf.hour_to_run), end_date + ':' + str(Conf.hour_to_run - 1))
     if Conf.exclude_addr:
         command += '--not-anyset={0} '.format(Conf.exclude_set_path)
     command += '--stype=2 --threads={0} --pass-destination={1}'\
