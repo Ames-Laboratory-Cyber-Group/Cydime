@@ -44,6 +44,7 @@ import gov.ameslab.cydime.util.Config;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -81,13 +82,19 @@ public class CydimeSort {
 	}
 	
 	private void run() throws IOException {
-		sortFile(Config.INSTANCE.getCurrentFeaturePath() + Config.INSTANCE.getTimeSeries());
-		sortFile(Config.INSTANCE.getCurrentFeaturePath() + Config.INSTANCE.getService());
-		sortFile(Config.INSTANCE.getCurrentFeaturePath() + Config.INSTANCE.getIntTimeSeries());
-		sortFile(Config.INSTANCE.getCurrentFeaturePath() + Config.INSTANCE.getIntService());
+		for (String featureSet : new String[] {Config.FEATURE_IP_DIR, Config.FEATURE_ASN_DIR, Config.FEATURE_INT_DIR}) {
+			Config.INSTANCE.setFeatureSet(featureSet);
+			sortFile(Config.INSTANCE.getCurrentFeaturePath() + Config.INSTANCE.getTimeSeries());
+			sortFile(Config.INSTANCE.getCurrentFeaturePath() + Config.INSTANCE.getService());
+		}
 	}
 
 	private void sortFile(String file) throws IOException {
+		if (!new File(file).exists()) {
+			Log.log(Level.INFO, "File not found, skipping: {0}", file);
+			return;
+		}
+		
 		Log.log(Level.INFO, "Sorting {0} ...", file);
 		
 		List<String> lines = CUtil.makeList();

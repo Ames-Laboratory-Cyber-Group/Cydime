@@ -16,10 +16,12 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -45,13 +47,13 @@ public class DailyProfile extends FeatureSet {
 	public enum Normalizer { SERVICE_SUM, TIME_SUM, RAW_SERVICE_NORM, RAW_TIME_NORM }
 	
 	private String mDPOutPath;
-	private Map<String, double[][]> mIPProfile;
+	private Map<String, double[][]> mIDProfile;
 	private Calendar mCal = GregorianCalendar.getInstance();
 	private IndexedList<Integer> mHourIndex;
 	private IndexedList<String> mServiceIndex;
 	
-	public DailyProfile(List<String> ipList, String inPath, String outPath) {
-		super(ipList, inPath, outPath);
+	public DailyProfile(List<String> ids, String inPath, String outPath) {
+		super(ids, inPath, outPath);
 	}
 
 	public InstanceDatabase run(Normalizer type) throws IOException {
@@ -76,21 +78,35 @@ public class DailyProfile extends FeatureSet {
 		}
 		
 		FileUtil.copy(mDPOutPath + WekaPreprocess.ALL_SUFFIX, mDPOutPath + WekaPreprocess.REPORT_SUFFIX);
-		return new InstanceDatabase(mDPOutPath, mAllIPs);
+		return new InstanceDatabase(mDPOutPath, mIDs);
 	}
 	
 	private void read() throws IOException {
 		Log.log(Level.INFO, "Processing daily profile...");
 		
-		mIPProfile = CUtil.makeMap();
-		mHourIndex = new IndexedList<Integer>(3, 7, 11, 15, 19, 23);
-		mServiceIndex = new IndexedList<String>(ServiceParser.SERVICES);
-		
+		Set<Integer> hours = CUtil.makeSet();
 		BufferedReader in = new BufferedReader(new FileReader(mCurrentInPath));
 		String line = in.readLine();
 		while ((line = in.readLine()) != null) {
 			String[] split = StringUtil.trimmedSplit(line, ",");
-			String ip = split[1];
+			long epoch = Long.parseLong(split[4]) * 1000;
+			int hour = getHourOfDay(new Date(epoch));
+			hours.add(hour);
+		}
+		in.close();
+		
+		List<Integer> hourList = CUtil.makeList(hours);
+		Collections.sort(hourList);
+		
+		mIDProfile = CUtil.makeMap();
+		mHourIndex = new IndexedList<Integer>(hourList);
+		mServiceIndex = new IndexedList<String>(ServiceParser.SERVICES);
+		
+		in = new BufferedReader(new FileReader(mCurrentInPath));
+		line = in.readLine();
+		while ((line = in.readLine()) != null) {
+			String[] split = StringUtil.trimmedSplit(line, ",");
+			String id = split[1];
 			double weight = Double.parseDouble(split[7]);
 			long epoch = Long.parseLong(split[4]) * 1000;
 			int hour = getHourOfDay(new Date(epoch));
@@ -99,17 +115,17 @@ public class DailyProfile extends FeatureSet {
 			String dest = split[3];
 			for (String serv : ServiceParser.parse(src, dest)) {
 				int servIndex = mServiceIndex.getIndex(serv);
-				add(ip, servIndex, hourIndex, weight);
+				add(id, servIndex, hourIndex, weight);
 			}
 		}
 		in.close();
 	}
 	
-	private void add(String ip, int servIndex, int hourIndex, double weight) {
-		double[][] profile = mIPProfile.get(ip);
+	private void add(String id, int servIndex, int hourIndex, double weight) {
+		double[][] profile = mIDProfile.get(id);
 		if (profile == null) {
 			profile = new double[mServiceIndex.size()][mHourIndex.size()];
-			mIPProfile.put(ip, profile);
+			mIDProfile.put(id, profile);
 		}
 		
 		profile[servIndex][hourIndex] += weight;
@@ -123,7 +139,7 @@ public class DailyProfile extends FeatureSet {
 	private void prepareInstancesServiceSum() throws IOException {
 		Log.log(Level.INFO, "Normalizing...");
 		
-		for (double[][] profile : mIPProfile.values()) {
+		for (double[][] profile : mIDProfile.values()) {
 			for (int i = 0; i < profile.length; i++) {
 				profile[i][0] = MathUtil.sum(profile[i]);
 			}
@@ -132,13 +148,13 @@ public class DailyProfile extends FeatureSet {
 		for (int i = 0; i < ServiceParser.SERVICES.length; i++) {
 			Percentile p = new Percentile();
 			
-			for (double[][] profile : mIPProfile.values()) {
+			for (double[][] profile : mIDProfile.values()) {
 				p.add(profile[i][0]);
 			}
 			
 			p.compute();
 			
-			for (double[][] profile : mIPProfile.values()) {
+			for (double[][] profile : mIDProfile.values()) {
 				profile[i][0] = p.getPercentile(profile[i][0]);
 			}
 		}
@@ -153,8 +169,8 @@ public class DailyProfile extends FeatureSet {
 		
 		String[] values = new String[ServiceParser.SERVICES.length + 1];
 		values[values.length - 1] = "?";
-		for (String ip : mAllIPs) {			
-			double[][] profile = mIPProfile.get(ip);
+		for (String id : mIDs) {			
+			double[][] profile = mIDProfile.get(id);
 			if (profile == null) {
 				profile = new double[mServiceIndex.size()][mHourIndex.size()];
 			}
@@ -171,7 +187,7 @@ public class DailyProfile extends FeatureSet {
 	private void prepareInstancesTimeSum() throws IOException {
 		Log.log(Level.INFO, "Normalizing...");
 		
-		for (double[][] profile : mIPProfile.values()) {
+		for (double[][] profile : mIDProfile.values()) {
 			for (int i = 1; i < profile.length; i++) {
 				for (int j = 0; j < profile[0].length; j++) {
 					profile[0][j] += profile[i][j];
@@ -191,8 +207,8 @@ public class DailyProfile extends FeatureSet {
 		
 		String[] values = new String[mHourIndex.size() + 1];
 		values[values.length - 1] = "?";
-		for (String ip : mAllIPs) {			
-			double[][] profile = mIPProfile.get(ip);
+		for (String id : mIDs) {			
+			double[][] profile = mIDProfile.get(id);
 			if (profile == null) {
 				profile = new double[mServiceIndex.size()][mHourIndex.size()];
 			}
@@ -212,7 +228,7 @@ public class DailyProfile extends FeatureSet {
 		for (int i = 0; i < ServiceParser.SERVICES.length; i++) {
 			Percentile p = new Percentile();
 			
-			for (double[][] profile : mIPProfile.values()) {
+			for (double[][] profile : mIDProfile.values()) {
 				for (int j = 0; j < profile[i].length; j++) {
 					p.add(profile[i][j]);
 				}
@@ -220,7 +236,7 @@ public class DailyProfile extends FeatureSet {
 			
 			p.compute();
 			
-			for (double[][] profile : mIPProfile.values()) {
+			for (double[][] profile : mIDProfile.values()) {
 				for (int j = 0; j < profile[i].length; j++) {
 					profile[i][j] = p.getPercentile(profile[i][j]);
 				}
@@ -239,8 +255,8 @@ public class DailyProfile extends FeatureSet {
 		
 		String[] values = new String[ServiceParser.SERVICES.length * mHourIndex.size() + 1];
 		values[values.length - 1] = "?";
-		for (String ip : mAllIPs) {			
-			double[][] profile = mIPProfile.get(ip);
+		for (String id : mIDs) {			
+			double[][] profile = mIDProfile.get(id);
 			if (profile == null) {
 				profile = new double[mServiceIndex.size()][mHourIndex.size()];
 			}
@@ -260,7 +276,7 @@ public class DailyProfile extends FeatureSet {
 	private void prepareInstancesTimeNorm() throws IOException {
 		Log.log(Level.INFO, "Normalizing...");
 		
-		for (double[][] profile : mIPProfile.values()) {
+		for (double[][] profile : mIDProfile.values()) {
 			for (int i = 0; i < profile.length; i++) {
 				MathUtil.normalize(profile[i]);
 			}
@@ -278,8 +294,8 @@ public class DailyProfile extends FeatureSet {
 		
 		String[] values = new String[ServiceParser.SERVICES.length * mHourIndex.size() + 1];
 		values[values.length - 1] = "?";
-		for (String ip : mAllIPs) {			
-			double[][] profile = mIPProfile.get(ip);
+		for (String id : mIDs) {			
+			double[][] profile = mIDProfile.get(id);
 			if (profile == null) {
 				profile = new double[mServiceIndex.size()][mHourIndex.size()];
 			}

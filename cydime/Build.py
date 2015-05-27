@@ -3,8 +3,11 @@ import sys
 
 from datetime import date, datetime, timedelta
 
+import ASNMap
 import Config as Conf
 import Common as Com
+import HostMap
+
 from Errors import CydimeDatabaseException
 from Database import insert_scores
 from FeatureInterface import build_installed_features
@@ -18,11 +21,16 @@ def create_daily_dirs(path):
     :param path: full path to daily build directory
     :type path: str
     '''
+    extensions = ('ip', 'asn', 'int')
+
     Com.create_directory(path + '/filter')
-    Com.create_directory(path + '/features')
-    Com.create_directory(path + '/preprocess')
-    Com.create_directory(path + '/report')
-    Com.create_directory(path + '/model')
+
+    for p in ('features', 'preprocess', 'report', 'model'):
+        full_path = path + '/' + p
+        Com.create_directory(full_path)
+        for ext in extensions:
+            Com.create_directory(full_path + '/' + ext)
+
 
 def calc_date(end, interval):
     '''Return (date_list, start_date, end_date, todays_date) tuple.
@@ -78,6 +86,18 @@ def build(end, interval=None, update=True, mail=False, initial=False):
                                  full_path + '/filter/out.silkFilter')
         logging.info('Features built for {0}'.format(end_date))
 
+        # do asn lookups (read from full netflow)
+        # args: ip fileame, asn filename, output filename
+        ASNMap.build_asn_map(full_path + '/features/ip/full_netflow.features',
+                             '/cydime_data/maps/GeoIPASNum2.csv', 
+                             full_path + '/preprocess/ipASNMap.csv')
+        logging.info('AS map built for {0}'.format(end_date))
+        # do hostname lookups (read from full netflow)
+        # args: ipFile, outFile
+        HostMap.buildHostMap(full_path + '/features/ip/full_netflow.features',
+                             full_path + '/preprocess/ipHostMap.csv')
+        logging.info('Host map built for {0}'.format(end_date))
+        # build asn features
         # we're done if this is an initial build
         if initial:
             return

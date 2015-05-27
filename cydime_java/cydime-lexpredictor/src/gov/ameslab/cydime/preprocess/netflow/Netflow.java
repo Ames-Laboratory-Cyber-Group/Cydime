@@ -85,8 +85,8 @@ public class Netflow extends FeatureSet {
 	private Instances mSchema;
 	private int mNumAtts;
 	
-	public Netflow(List<String> allIPs, String inPath, String outPath) {
-		super(allIPs, inPath, outPath);
+	public Netflow(List<String> ids, String inPath, String outPath) {
+		super(ids, inPath, outPath);
 		mInstanceMap = CUtil.makeMap();
 		mSchema = new Instances("netflow", new ArrayList<Attribute>(), 0);
 	}
@@ -105,7 +105,7 @@ public class Netflow extends FeatureSet {
 		WekaPreprocess.filterUnsuperivsed(mCurrentOutPath + WekaPreprocess.ALL_SUFFIX,
 				NormalizeLog);
 		
-		return new InstanceDatabase(mCurrentOutPath, mAllIPs);
+		return new InstanceDatabase(mCurrentOutPath, mIDs);
 	}
 
 	private void readFile() throws IOException {
@@ -120,7 +120,7 @@ public class Netflow extends FeatureSet {
 			for (int i = 0; i < values.length; i++) {
 				values[i] = values[i].trim();
 			}
-			String ip = values[0];
+			String id = values[0];
 			
 			//src_cc,dst_cc
 			if (values[1].equals("--") && values[2].equals("--")) {
@@ -148,7 +148,7 @@ public class Netflow extends FeatureSet {
 			}
 			
 			inst.setClassMissing();
-			mInstanceMap.put(ip, inst);
+			mInstanceMap.put(id, inst);
 		}
 		
 		in.close();
@@ -191,8 +191,8 @@ public class Netflow extends FeatureSet {
 	private void prepareInstances() {
 		Instances instances = new Instances(mSchema, 0);
 		
-		for (String ip : mAllIPs) {
-			Instance inst = mInstanceMap.get(ip);
+		for (String id : mIDs) {
+			Instance inst = mInstanceMap.get(id);
 			inst.setClassMissing();
 			instances.add(inst);
 		}

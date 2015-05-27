@@ -89,6 +89,13 @@ public class Histogram<T> {
 		return sum;
 	}
 
+	public void normalize() {
+		double sum = sum();
+		if (sum <= 0.0) return;
+		
+		divide(sum);
+	}
+
 	public int size() {
 		return mHistogram.size();
 	}
@@ -96,6 +103,13 @@ public class Histogram<T> {
 	public void add(Histogram<T> o) {
 		for (Entry<T, Double> entry : o.entrySet()) {
 			increment(entry.getKey(), entry.getValue());
+		}
+	}
+
+	public void divide(double a) {
+		for (T key : mHistogram.keySet()) {
+			double v = mHistogram.get(key);
+			mHistogram.put(key, v / a);
 		}
 	}
 

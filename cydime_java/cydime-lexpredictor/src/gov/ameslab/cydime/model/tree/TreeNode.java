@@ -41,23 +41,21 @@ package gov.ameslab.cydime.model.tree;
 
 import gov.ameslab.cydime.util.CUtil;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
 import java.io.PrintStream;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 /**
  * @author Harris Lin (harris.lin.nz at gmail.com)
  */
 public class TreeNode {
 	
-	private String mPartName;
-	private Set<String> mIPs;
+	private static final int MAX_AVERAGE_COUNT = 100;
+	
 	private Map<String, TreeNode> mChildren;
-	private Set<String> mDescendentIPs;
+	
+	private double cScoreSum;
+	private int cScoreCount;
 	
 	private DomainSplitter mDomainSplitter;
 	private static class DomainSplitter {
@@ -75,131 +73,87 @@ public class TreeNode {
 		}
 	}
 	
-	public TreeNode(String partName) {
-		mPartName = partName;
-		mIPs = CUtil.makeSet();
-		mChildren = CUtil.makeMap();
+	public TreeNode() {
+//		mChildren = CUtil.makeMap();
+		cScoreSum = 0.0;
+		cScoreCount = 0;
 		mDomainSplitter = new DomainSplitter();
 	}
 
-	public void addDomain(String domain, String ip) {
+	public void addScore(String domain, double score) {
 		mDomainSplitter.split(domain);
+		
+		if (mChildren == null) {
+			mChildren = CUtil.makeMap();
+		}
 		
 		TreeNode child = mChildren.get(mDomainSplitter.Next);
 		if (child == null) {
-			child = new TreeNode(mDomainSplitter.Next);
+			child = new TreeNode();
 			mChildren.put(mDomainSplitter.Next, child);
 		}
 		
 		if (mDomainSplitter.Rest == null) {
-			child.mIPs.add(ip);
+			child.cScoreSum += score;
+			child.cScoreCount++;
 		} else {
-			child.addDomain(mDomainSplitter.Rest, ip);
+			child.addScore(mDomainSplitter.Rest, score);
 		}
 	}
 
-	public void getIPs(String domain, Set<String> result) {
-		if (domain == null) {
-			result.addAll(mIPs);
-			for (TreeNode c : mChildren.values()) {
-				c.getIPs(null, result);
-			}
-		} else {
-			mDomainSplitter.split(domain);
-			TreeNode c = mChildren.get(mDomainSplitter.Next);
-			if (c == null) return;
-			
-			c.getIPs(mDomainSplitter.Rest, result);
-		}
-	}
-
-	public void print(PrintStream out, int level) {
-		for (int i = 0; i < level; i++) {
-			out.print("  ");
+	public double getScore(String domain) {
+		mDomainSplitter.split(domain);
+		
+		if (mChildren == null) {
+			return getThresholdedAverage();
 		}
 		
-		out.print(mPartName);
-		if (mIPs.isEmpty()) {
-			out.println();
-		} else {
-			out.print(" : ");
-			out.println(mIPs);
+		TreeNode child = mChildren.get(mDomainSplitter.Next);
+		if (child == null) {
+			return getThresholdedAverage();
 		}
+		
+		if (mDomainSplitter.Rest == null) {
+			return child.getThresholdedAverage();
+		} else {
+			return child.getScore(mDomainSplitter.Rest);
+		}
+	}
+
+	private double getThresholdedAverage() {
+		if (cScoreCount > MAX_AVERAGE_COUNT) {
+			return Double.NaN;
+		} else {
+			return cScoreSum / cScoreCount;
+		}
+	}
+
+	public void calcStats() {
+		if (mChildren == null) return;
 		
 		for (TreeNode c : mChildren.values()) {
+			c.calcStats();
+			
+			cScoreSum += c.cScoreSum;
+			cScoreCount += c.cScoreCount;
+		}
+	}	
+	
+	public void print(PrintStream out, int level) {
+		if (mChildren == null) return;
+		for (Entry<String, TreeNode> entry : mChildren.entrySet()) {
+			TreeNode c = entry.getValue();
+			
+			for (int i = 0; i < level; i++) {
+				out.print("  ");
+			}
+			
+			out.print(entry.getKey());
+			out.print(" ");
+			out.println(c.cScoreSum + " / " + c.cScoreCount);
+			
 			c.print(out, level + 1);
 		}
-	}
-
-	public void write(BufferedWriter out, String ancestor) throws IOException {
-		if (mChildren.isEmpty()) return;
-		
-		String newAncestor = getFullName(ancestor);
-		out.write(newAncestor);
-		for (Entry<String, TreeNode> entry : mChildren.entrySet()) {
-			TreeNode c = entry.getValue();
-			out.write(",");
-			out.write(c.getFullName(newAncestor));
-		}
-		out.newLine();
-		
-		for (Entry<String, TreeNode> entry : mChildren.entrySet()) {
-			TreeNode c = entry.getValue();
-			c.write(out, newAncestor);
-		}
-	}
-
-	private String getFullName(String ancestor) {
-		if (mPartName == null) {
-			return "*";
-		} else {
-			return mPartName + "." + ancestor;
-		}
-	}
-
-	public void countDescendentIPs() {
-		mDescendentIPs = CUtil.makeSet(mIPs);
-		for (TreeNode c : mChildren.values()) {
-			c.countDescendentIPs();
-			mDescendentIPs.addAll(c.mDescendentIPs);
-		}
-	}
-
-	public void reduce(int threshold, Map<String, String> replace, String ancestor) {
-		String newAncestor = null;
-		if (ancestor == null) {
-			newAncestor = mPartName;
-		} else {
-			newAncestor = mPartName + "." + ancestor;
-		}
-		
-		for (Iterator<Entry<String, TreeNode>> it = mChildren.entrySet().iterator(); it.hasNext(); ) {
-			Entry<String, TreeNode> next = it.next();
-			TreeNode c = next.getValue();
-			
-			if (c.mDescendentIPs.size() <= threshold) {
-				it.remove();
-				mIPs.addAll(c.mDescendentIPs);
-				for (String ip : c.mDescendentIPs) {
-					replace.put(ip, newAncestor);
-				}
-			} else {
-				c.reduce(threshold, replace, newAncestor);
-			}
-		}
-	}
-
-	public int getDescendentSize() {
-		if (mDescendentIPs == null) return -1;
-		return mDescendentIPs.size();
-	}
-
-	public int getDescendentNodes() {
-		int size = 1;
-		for (TreeNode c : mChildren.values()) {
-			size += c.getDescendentNodes();
-		}
-		return size;
 	}
 	
 }

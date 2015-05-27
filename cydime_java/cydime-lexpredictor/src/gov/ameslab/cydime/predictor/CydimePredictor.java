@@ -81,7 +81,7 @@ public class CydimePredictor {
 	
 	private boolean mDoDebug;
 	
-	public static void main(String[] args) throws Exception {
+	public static void main(String[] args) {
 		if (args.length != 1) {
 			printUsage();
 			return;
@@ -108,11 +108,29 @@ public class CydimePredictor {
 		mDoDebug = v;
 	}
 	
-	private void run() throws Exception {
+	private void run() {
+		try {
+			run(Config.FEATURE_IP_DIR);
+		} catch (Exception e) {
+			Log.log(Level.SEVERE, e.toString());
+			e.printStackTrace();
+		}
+		
+		try {
+			run(Config.FEATURE_ASN_DIR);
+		} catch (Exception e) {
+			Log.log(Level.SEVERE, e.toString());
+			e.printStackTrace();
+		}
+	}
+	
+	private void run(String featureSet) throws Exception {
+		Config.INSTANCE.setFeatureSet(featureSet);
+		
 		InstanceDatabase baseNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
 		InstanceDatabase baseScore = null;
-		if (baseNorm.getTrainIPs().size() < Config.INSTANCE.getInt(Config.MISSION_SIM_THRESHOLD)) {
-			Log.log(Level.INFO, "Available lexical mission similarity scores " + baseNorm.getTrainIPs().size() + " is under required threshold: " + Config.INSTANCE.getInt(Config.MISSION_SIM_THRESHOLD)
+		if (baseNorm.getTrainIDs().size() < Config.INSTANCE.getInt(Config.MISSION_SIM_THRESHOLD)) {
+			Log.log(Level.INFO, "Available lexical mission similarity scores " + baseNorm.getTrainIDs().size() + " is under required threshold: " + Config.INSTANCE.getInt(Config.MISSION_SIM_THRESHOLD)
 					+ " -- using feature ranker instead.");
 			
 			baseScore = predictRank(baseNorm);
@@ -128,17 +146,11 @@ public class CydimePredictor {
 			all.writeReport();
 			
 			baseScore = learnAndPredict(ClassifierFactory.makeREPTree(), all, Config.INSTANCE.getBaseScorePath());
-			
-			//Report
-			InstanceDatabase baseNormCV = stack("baseNorm_stack", baseNorm, ClassifierFactory.makeREPTree());
-			InstanceDatabase predicted = InstanceDatabase.mergeFeatures(Config.INSTANCE.getAllPredictedPath(),
-					hierarchyCV,
-					baseNormCV);
-			predicted.writeReport();			
 		}
 		
 		//Final result
-		writeFinalResult(baseNorm, baseScore);
+		InstanceDatabase base = InstanceDatabase.load(Config.INSTANCE.getBasePath());
+		writeFinalResult(baseNorm, baseScore, base);
 	}
 
 	private InstanceDatabase predictRank(InstanceDatabase base) throws IOException {
@@ -148,8 +160,8 @@ public class CydimePredictor {
 		ARFFWriter out = new ARFFWriter(Config.INSTANCE.getRankScorePath() + WekaPreprocess.ALL_SUFFIX, "rank_score", null,
 				"rank_score numeric"
 				); 
-		for (String ip : base.getIPs()) {
-			Instance inst = base.getWekaInstance(ip);
+		for (String id : base.getIDs()) {
+			Instance inst = base.getWekaInstance(id);
 			double rank_score = fr.classifyInstance(inst);
 			out.writeValues(String.valueOf(rank_score), "?");
 		}
@@ -159,7 +171,7 @@ public class CydimePredictor {
 				Normalize);
 		FileUtil.copy(Config.INSTANCE.getRankScorePath() + WekaPreprocess.ALL_SUFFIX, Config.INSTANCE.getRankScorePath() + WekaPreprocess.REPORT_SUFFIX);
 		
-		return new InstanceDatabase(Config.INSTANCE.getRankScorePath(), base.getIPs());
+		return new InstanceDatabase(Config.INSTANCE.getRankScorePath(), base.getIDs());
 	}
 
 	private InstanceDatabase stack(String name, InstanceDatabase base, AbstractClassifier c) throws Exception {
@@ -170,14 +182,14 @@ public class CydimePredictor {
 		
 		Instances train = base.getWekaTrain();
 		c.buildClassifier(train);
-		for (String ip : base.getTestIPs()) {
-			Instance inst = base.getWekaInstance(ip);
+		for (String id : base.getTestIDs()) {
+			Instance inst = base.getWekaInstance(id);
 			double dist = c.classifyInstance(inst);
-			stack.put(ip, dist);
+			stack.put(id, dist);
 		}
 		
 		//Prepare stack results for train (2-fold CV)
-		List<String> cvIPs = CUtil.makeList(base.getTrainIPs());
+		List<String> cvIPs = CUtil.makeList(base.getTrainIDs());
 		Collections.shuffle(cvIPs, new Random(0));
 		int cutoff = cvIPs.size() / 2;
 		List<String> cvFold1IPs = cvIPs.subList(0, cutoff);
@@ -192,54 +204,81 @@ public class CydimePredictor {
 				); 
 		
 		String[] values = new String[2];
-		for (String ip : base.getIPs()) {
-			values[0] = String.valueOf(stack.get(ip));
-			values[1] = String.valueOf(base.getLabel(ip));
+		for (String id : base.getIDs()) {
+			values[0] = String.valueOf(stack.get(id));
+			values[1] = String.valueOf(base.getLabel(id));
 			out.writeValues(values);
 		}
 		out.close();
 		
 		FileUtil.copy(Config.INSTANCE.getCurrentModelPath() + name + WekaPreprocess.ALL_SUFFIX, Config.INSTANCE.getCurrentModelPath() + name + WekaPreprocess.REPORT_SUFFIX);
 		
-		return new InstanceDatabase(Config.INSTANCE.getCurrentModelPath() + name, base.getIPs());
+		return new InstanceDatabase(Config.INSTANCE.getCurrentModelPath() + name, base.getIDs());
 	}
 	
 	private static void stackCV(Map<String, Double> stack, InstanceDatabase base, AbstractClassifier c, List<String> trainIPs, List<String> testIPs) throws Exception {
 		Instances train = new Instances(base.getWekaTrain(), 0);
-		for (String ip : trainIPs) {
-			Instance inst = base.getWekaInstance(ip);
+		for (String id : trainIPs) {
+			Instance inst = base.getWekaInstance(id);
 			inst.setDataset(train);
 			train.add(inst);
 		}
 		
 		c.buildClassifier(train);
 		
-		for (String ip : testIPs) {
-			Instance inst = base.getWekaInstance(ip);
+		for (String id : testIPs) {
+			Instance inst = base.getWekaInstance(id);
 			double dist = c.classifyInstance(inst);
-			stack.put(ip, dist);
+			stack.put(id, dist);
 		}
 	}
 	
-	private void writeFinalResult(InstanceDatabase all, InstanceDatabase test) throws IOException {
+	private void writeFinalResult(InstanceDatabase baseNorm, InstanceDatabase baseScore, InstanceDatabase base) throws IOException {
 		BufferedWriter out = new BufferedWriter(new FileWriter(Config.INSTANCE.getFinalResultPath()));
-		out.write("IP,score");
+		out.write("ID,lexical_norm,lexical_predicted,byte,byte_norm,mission_norm,exfiltration_norm");
 		out.newLine();
 		
-		for (String ip : all.getIPs()) {
-			out.write(ip + ",");
-			
-			if (all.hasLabel(ip)) {
-				out.write(String.valueOf(all.getLabel(ip)));
+		for (String id : baseNorm.getIDs()) {
+			double lexical = 0.0;
+			boolean isLexicalPredicted = false;
+			if (baseNorm.hasLabel(id)) {
+				lexical = baseNorm.getLabel(id);
 			} else {
-				Instance inst = test.getWekaInstance(ip);
-				out.write(String.valueOf(inst.value(0)));
-			}
+				isLexicalPredicted = true;
+				lexical = baseScore.getWekaInstance(id).value(0);
+			}		
+			
+			double bytes = base.getWekaReportInstance(id).value(3);
+			double bytesNorm = baseNorm.getWekaInstance(id).value(3);
+			double mission = getMission(lexical, bytesNorm);
+			double exfiltration = getExfiltration(isLexicalPredicted ? 0.0 : lexical, bytesNorm);
+			
+			out.write(id + ",");
+			out.write(String.valueOf(lexical));
+			out.write(",");
+			out.write(isLexicalPredicted ? "1" : "0");
+			out.write(",");
+			out.write(String.valueOf(bytes));
+			out.write(",");
+			out.write(String.valueOf(bytesNorm));
+			out.write(",");
+			out.write(String.valueOf(mission));
+			out.write(",");
+			out.write(String.valueOf(exfiltration));
 			out.newLine();
 		}
 		out.close();
 	}
 
+	private double getMission(double lexical, double bytesNorm) {
+		return Math.sqrt(lexical * lexical + bytesNorm * bytesNorm);
+	}
+
+	private double getExfiltration(double lexical, double bytesNorm) {
+		lexical = 1.0 - lexical;
+		return Math.sqrt(lexical * lexical + bytesNorm * bytesNorm);
+	}
+	
 	private InstanceDatabase learnAndPredict(AbstractClassifier c, InstanceDatabase input, String output) throws Exception {
 		Log.log(Level.INFO, "Learning {0} ...", output);
 		
@@ -270,10 +309,10 @@ public class CydimePredictor {
 
 	private Map<String, Double> predict(AbstractClassifier c, InstanceDatabase input) throws Exception {
 		Map<String, Double> pred = CUtil.makeMap();
-		for (String ip : input.getTestIPs()) {
-			Instance inst = input.getWekaInstance(ip);
+		for (String id : input.getTestIDs()) {
+			Instance inst = input.getWekaInstance(id);
 			double dist = c.classifyInstance(inst);
-			pred.put(ip, dist);
+			pred.put(id, dist);
 		}
 		return pred;
 	}
@@ -282,14 +321,14 @@ public class CydimePredictor {
 		File path = new File(file);
 		String name = path.getName();
 		ARFFWriter out = new ARFFWriter(file + WekaPreprocess.ALL_SUFFIX, name, null, name + " numeric"); 
-		for (String ip : input.getTestIPs()) {
-			double pred = prediction.get(ip);
+		for (String id : input.getTestIDs()) {
+			double pred = prediction.get(id);
 			out.writeValues(String.valueOf(pred), "?");
 		}
 		out.close();
 		
 		FileUtil.copy(file + WekaPreprocess.ALL_SUFFIX, file + WekaPreprocess.REPORT_SUFFIX);
-		InstanceDatabase output = new InstanceDatabase(file, input.getTestIPs());
+		InstanceDatabase output = new InstanceDatabase(file, input.getTestIDs());
 		output.saveIPs();
 		return output;
 	}

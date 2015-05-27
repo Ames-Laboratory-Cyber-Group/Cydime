@@ -117,6 +117,7 @@ public class CydimePredictorExp {
 
 	public CydimePredictorExp(String[] args) {
 		Config.INSTANCE.setParam(args[0]);
+		Config.INSTANCE.setFeatureSet(Config.FEATURE_IP_DIR);
 
 		if (args[1].equalsIgnoreCase("strength")) {
 			mAlgorithmSet = Algorithm.STRENGTH;
@@ -135,7 +136,7 @@ public class CydimePredictorExp {
 		InstanceDatabase baseNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
 		InstanceDatabase hierarchy = InstanceDatabase.load(Config.INSTANCE.getCurrentPreprocessPath() + Config.INSTANCE.getHierarchy());
 		
-		List<String> ips = CUtil.makeList(baseNorm.getIPs());
+		List<String> ips = CUtil.makeList(baseNorm.getIDs());
 		Collections.shuffle(ips, new Random((long) (mSeed * 100 * mLabelPercentage)));
 
 		int cutoff = (int) (ips.size() * mLabelPercentage / 100.0);
@@ -184,7 +185,7 @@ public class CydimePredictorExp {
 		Log.log(Level.INFO, "Finished {0}", mAlgorithms[mAlgorithm].toString());
 		
 		Map<String, Double> pred = CUtil.makeMap();
-		for (String ip : baseNorm.getTestIPs()) {
+		for (String ip : baseNorm.getTestIDs()) {
 			Instance inst = baseNorm.getWekaInstance(ip);
 			double dist = mAlgorithms[mAlgorithm].classifyInstance(inst);
 			pred.put(ip, dist);
@@ -201,7 +202,7 @@ public class CydimePredictorExp {
 		Log.log(Level.INFO, "Finished {0}", mHierarchyAlgorithm.toString());
 		
 		Map<String, Double> pred = CUtil.makeMap();
-		for (String ip : hierarchy.getTestIPs()) {
+		for (String ip : hierarchy.getTestIDs()) {
 			Instance inst = hierarchy.getWekaInstance(ip);
 			double dist = mHierarchyAlgorithm.classifyInstance(inst);
 			pred.put(ip, dist);
@@ -227,7 +228,7 @@ public class CydimePredictorExp {
 		Log.log(Level.INFO, "Finished {0}", mAlgorithms[mAlgorithm].toString());
 		
 		Map<String, Double> pred = CUtil.makeMap();
-		for (String ip : baseNorm.getTestIPs()) {
+		for (String ip : baseNorm.getTestIDs()) {
 			Instance inst = all.getWekaInstance(ip);
 			double dist = mAlgorithms[mAlgorithm].classifyInstance(inst);
 			pred.put(ip, dist);
@@ -244,14 +245,14 @@ public class CydimePredictorExp {
 		
 		Instances train = base.getWekaTrain();
 		c.buildClassifier(train);
-		for (String ip : base.getTestIPs()) {
+		for (String ip : base.getTestIDs()) {
 			Instance inst = base.getWekaInstance(ip);
 			double dist = c.classifyInstance(inst);
 			stack.put(ip, dist);
 		}
 		
 		//Prepare stack results for train (2-fold CV)
-		List<String> cvIPs = CUtil.makeList(base.getTrainIPs());
+		List<String> cvIPs = CUtil.makeList(base.getTrainIDs());
 		Collections.shuffle(cvIPs, new Random(mSeed));
 		int cutoff = cvIPs.size() / 2;
 		List<String> cvFold1IPs = cvIPs.subList(0, cutoff);
@@ -266,7 +267,7 @@ public class CydimePredictorExp {
 				); 
 		
 		String[] values = new String[2];
-		for (String ip : base.getIPs()) {
+		for (String ip : base.getIDs()) {
 			values[0] = String.valueOf(stack.get(ip));
 			values[1] = String.valueOf(base.getLabel(ip));
 			out.writeValues(values);
@@ -275,7 +276,7 @@ public class CydimePredictorExp {
 		
 		FileUtil.copy(Config.INSTANCE.getCurrentModelPath() + name + WekaPreprocess.ALL_SUFFIX, Config.INSTANCE.getCurrentModelPath() + name + WekaPreprocess.REPORT_SUFFIX);
 		
-		return new InstanceDatabase(Config.INSTANCE.getCurrentModelPath() + name, base.getIPs());
+		return new InstanceDatabase(Config.INSTANCE.getCurrentModelPath() + name, base.getIDs());
 	}
 
 	private static void stackCV(Map<String, Double> stack, InstanceDatabase base, AbstractClassifier c, List<String> trainIPs, List<String> testIPs) throws Exception {

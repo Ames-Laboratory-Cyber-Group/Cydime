@@ -118,7 +118,7 @@ public class PlotFrame extends javax.swing.JFrame implements SelectionListener {
         jPanel7 = new javax.swing.JPanel();
         jLabel10 = new javax.swing.JLabel();
         jScrollPane6 = new javax.swing.JScrollPane();
-        treWhois = new javax.swing.JTree();
+        treASN = new javax.swing.JTree();
         jPanel13 = new javax.swing.JPanel();
         jPanel1 = new javax.swing.JPanel();
         jPanel4 = new javax.swing.JPanel();
@@ -130,7 +130,7 @@ public class PlotFrame extends javax.swing.JFrame implements SelectionListener {
         cmbXAxis = new javax.swing.JComboBox<String>();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setTitle("DWL Explorer");
+        setTitle("Cydime Explorer");
         setPreferredSize(new java.awt.Dimension(800, 1000));
         getContentPane().setLayout(new javax.swing.BoxLayout(getContentPane(), javax.swing.BoxLayout.PAGE_AXIS));
 
@@ -203,12 +203,12 @@ public class PlotFrame extends javax.swing.JFrame implements SelectionListener {
         jPanel7.setLayout(new java.awt.BorderLayout());
 
         jLabel10.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel10.setText("Whois Hierarchy");
+        jLabel10.setText("ASN");
         jPanel7.add(jLabel10, java.awt.BorderLayout.PAGE_START);
 
         treeNode1 = new javax.swing.tree.DefaultMutableTreeNode("root");
-        treWhois.setModel(new javax.swing.tree.DefaultTreeModel(treeNode1));
-        jScrollPane6.setViewportView(treWhois);
+        treASN.setModel(new javax.swing.tree.DefaultTreeModel(treeNode1));
+        jScrollPane6.setViewportView(treASN);
 
         jPanel7.add(jScrollPane6, java.awt.BorderLayout.CENTER);
 
@@ -255,7 +255,7 @@ public class PlotFrame extends javax.swing.JFrame implements SelectionListener {
 	private void initTrees() {
 		treService.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 		treDomain.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
-		treWhois.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+		treASN.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 	}
 
 	private void initPlot() {
@@ -323,9 +323,9 @@ public class PlotFrame extends javax.swing.JFrame implements SelectionListener {
     private javax.swing.JLabel lbl1;
     private javax.swing.JLabel lblTotal;
     private javax.swing.JLabel lblUnlabeled;
+    private javax.swing.JTree treASN;
     private javax.swing.JTree treDomain;
     private javax.swing.JTree treService;
-    private javax.swing.JTree treWhois;
     // End of variables declaration//GEN-END:variables
 	
 	public void setDataSelectionListener(DataSelectionListener a) {
@@ -336,13 +336,13 @@ public class PlotFrame extends javax.swing.JFrame implements SelectionListener {
 	public void addFilterListener(TreeSelectionListener a) {
 		treService.addTreeSelectionListener(a);
 		treDomain.addTreeSelectionListener(a);
-		treWhois.addTreeSelectionListener(a);
+		treASN.addTreeSelectionListener(a);
 	}
 
 	public void loadFilters(DefaultTreeModel serviceModel, DefaultTreeModel domainModel, DefaultTreeModel whoisModel) {
 		treService.setModel(serviceModel);
 		treDomain.setModel(domainModel);
-		treWhois.setModel(whoisModel);
+		treASN.setModel(whoisModel);
 	}
 
 	public String getSelectedService() {
@@ -354,7 +354,7 @@ public class PlotFrame extends javax.swing.JFrame implements SelectionListener {
 	}
 
 	public String getSelectedWhois() {
-		return getSelectedTreePath(treWhois);
+		return getSelectedTreePath(treASN);
 	}
 
 	private String getSelectedTreePath(JTree tree) {

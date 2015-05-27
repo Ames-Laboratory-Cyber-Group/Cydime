@@ -106,20 +106,20 @@ public class TimeSeries extends FeatureSet {
 
 	private static Set<String> SERIES = CUtil.asSet("Bytes");
 	
-	public static List<String> getRequiredPaths() {
+	public static List<String> getRequiredPaths(String baseDir) {
 		List<String> paths = CUtil.makeList();
 		for (String s : SERIES) {
-			paths.add(Config.INSTANCE.getPath(Config.PREPROCESS_DIR) + Config.INSTANCE.getTimeSeries() + "." + s);
+			paths.add(baseDir + Config.INSTANCE.getTimeSeries() + "." + s);
 		}		
 		return paths;
 	}
 
 	private EpochConverter mEpochConverter;
 	private List<String> mSeries;
-	private Map<String, String> mIPSeries;
+	private Map<String, String> mIDSeries;
 	
-	public TimeSeries(List<String> ipList, String inPath, String outPath) {
-		super(ipList, inPath, outPath);
+	public TimeSeries(List<String> ids, String inPath, String outPath) {
+		super(ids, inPath, outPath);
 		mEpochConverter = new EpochConverter();
 	}
 
@@ -136,7 +136,7 @@ public class TimeSeries extends FeatureSet {
 				NormalizeLog);
 		
 		FileUtil.copy(mCurrentOutPath + WekaPreprocess.ALL_SUFFIX, mCurrentOutPath + WekaPreprocess.REPORT_SUFFIX);
-		return new InstanceDatabase(mCurrentOutPath, mAllIPs);
+		return new InstanceDatabase(mCurrentOutPath, mIDs);
 	}
 	
 	private void readSchema() throws IOException {
@@ -148,26 +148,26 @@ public class TimeSeries extends FeatureSet {
 			mSeries.add(split[i].trim());
 		}
 		
-		Set<String> seenIPs = CUtil.makeSet();
-		String lastIP = "";
+		Set<String> seenIDs = CUtil.makeSet();
+		String lastID = "";
 		while ((line = in.readLine()) != null) {
 			line = line.trim();
 			split = StringUtil.trimmedSplit(line, ",");
 			long time = Long.parseLong(split[1]);
 			mEpochConverter.updateRange(time);
 			
-			if (!lastIP.equals(split[0])) {
-				if (seenIPs.contains(split[0])) {
+			if (!lastID.equals(split[0])) {
+				if (seenIDs.contains(split[0])) {
 					in.close();
-					throw new IllegalArgumentException("Error: IPs are not sorted in " + mCurrentInPath + " (" + split[0] + " has appeared already)");
+					throw new IllegalArgumentException("Error: Keys are not sorted in " + mCurrentInPath + " (" + split[0] + " has appeared already)");
 				}
-				lastIP = split[0];
-				seenIPs.add(split[0]);
+				lastID = split[0];
+				seenIDs.add(split[0]);
 			}
 		}
 		in.close();
 		
-//		System.out.println(mIPs.size() + " " + mMinEpoch + "-" + mMaxEpoch + " " + (mMaxEpoch - mMinEpoch) / BIN_SEC);
+//		System.out.println(seenIDs.size() + " " + mMinEpoch + "-" + mMaxEpoch + " " + (mMaxEpoch - mMinEpoch) / BIN_SEC);
 	}
 
 	private void flatten() throws IOException {
@@ -183,18 +183,18 @@ public class TimeSeries extends FeatureSet {
 			out.write(String.valueOf(LENGTH));
 			out.newLine();
 			
-			String lastIP = null;
+			String lastID = null;
 			String line = in.readLine();
 			while ((line = in.readLine()) != null) {
 				String[] split = StringUtil.trimmedSplit(line, ",");
 				
-				if (!split[0].equals(lastIP)) {
-					if (lastIP != null) {
-						writeSeries(out, lastIP, series, true);
+				if (!split[0].equals(lastID)) {
+					if (lastID != null) {
+						writeSeries(out, lastID, series, true);
 					}
 					
 					Arrays.fill(series, 0);
-					lastIP = split[0];
+					lastID = split[0];
 				}
 				
 				long time = Long.parseLong(split[1]);
@@ -202,8 +202,8 @@ public class TimeSeries extends FeatureSet {
 				series[mEpochConverter.toIndex(time)] = value;
 			}
 			
-			if (lastIP != null) {
-				writeSeries(out, lastIP, series, true);
+			if (lastID != null) {
+				writeSeries(out, lastID, series, true);
 			}
 			
 			in.close();
@@ -211,8 +211,8 @@ public class TimeSeries extends FeatureSet {
 		}
 	}
 
-	private void writeSeries(BufferedWriter out, String ip, long[] series, boolean sparse) throws IOException {
-		out.write(ip);
+	private void writeSeries(BufferedWriter out, String id, long[] series, boolean sparse) throws IOException {
+		out.write(id);
 		for (int j = 0; j < series.length; j++) {
 			if (sparse) {
 				if (series[j] > 0) {
@@ -244,7 +244,7 @@ public class TimeSeries extends FeatureSet {
 	private void mergeAllSeries() throws IOException {
 		Log.log(Level.INFO, "Processing time series (Phase 3)...");
 		
-		mIPSeries = CUtil.makeMap();
+		mIDSeries = CUtil.makeMap();
 		for (int i = 0; i < mSeries.size(); i++) {
 			if (SERIES.contains(mSeries.get(i))) {
 				for (int j = 0; j < CONVERTERS.length; j++) {
@@ -259,15 +259,15 @@ public class TimeSeries extends FeatureSet {
 		String line = null;
 		while ((line = in.readLine()) != null) {
 			int comma = line.indexOf(",");
-			String ip = line.substring(0, comma);
+			String id = line.substring(0, comma);
 			line = line.substring(comma + 1);
-			String series = mIPSeries.get(ip);
+			String series = mIDSeries.get(id);
 			if (series == null) {
 				series = line;
 			} else {
 				series = new StringBuilder(series).append(",").append(line).toString();
 			}
-			mIPSeries.put(ip, series);
+			mIDSeries.put(id, series);
 		}
 		in.close();
 	}
@@ -287,8 +287,8 @@ public class TimeSeries extends FeatureSet {
 		
 		ARFFWriter out = new ARFFWriter(mCurrentOutPath + WekaPreprocess.ALL_SUFFIX, "timeseries", null, atts); 
 		
-		for (String ip : mAllIPs) {
-			String series = mIPSeries.get(ip);
+		for (String id : mIDs) {
+			String series = mIDSeries.get(id);
 			out.writeLine(series + ",?");
 		}
 		

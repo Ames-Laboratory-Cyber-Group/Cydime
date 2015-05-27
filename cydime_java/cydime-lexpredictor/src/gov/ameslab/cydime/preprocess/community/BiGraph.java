@@ -67,8 +67,8 @@ public class BiGraph extends FeatureSet {
 	private IndexedList<String> mExtIPList;
 	private Matrix<Double> mMatrix; // mMatrix[internal][external]
 	
-	public BiGraph(List<String> ipList, String inPath, String outPath) {
-		super(ipList, inPath, outPath);
+	public BiGraph(List<String> ids, String inPath, String outPath) {
+		super(ids, inPath, outPath);
 	}
 
 	public void run() throws IOException {

@@ -46,9 +46,9 @@ import gov.ameslab.cydime.util.CSVReader;
 import gov.ameslab.cydime.util.CUtil;
 import gov.ameslab.cydime.util.Config;
 import gov.ameslab.cydime.util.HashMap;
+import gov.ameslab.cydime.util.HashMap.ValueFactory;
 import gov.ameslab.cydime.util.HistogramLong;
 import gov.ameslab.cydime.util.IndexedList;
-import gov.ameslab.cydime.util.HashMap.ValueFactory;
 import gov.ameslab.cydime.util.models.TreeNode;
 
 import java.io.IOException;
@@ -82,20 +82,22 @@ public class PlotData {
     private Set<String> mExtIPSet;
     private List<String> mIntIPs;
     
-    private Map<String, Map<String, Map<String, Set<String>>>> mServDomainWhoisIPs;
+    private Map<String, Map<String, Map<String, Set<String>>>> mServDomainASNIPs;
     private Map<String, String> mDomainParents;
-    private Map<String, String> mWhoisParents;
     private HistogramLong<String> mServiceCount;
     private HistogramLong<String> mDomainCount;
-    private HistogramLong<String> mWhoisCount;
+    private HistogramLong<String> mASNCount;
 		
 	public void load(DomainDatabase domainDB) throws IOException {
 		mDomainDB = domainDB;
-		mExtIPs = InstanceDatabase.load(Config.INSTANCE.getBasePath()).getIPs();
+		Config.INSTANCE.setFeatureSet(Config.FEATURE_IP_DIR);
+		mExtIPs = InstanceDatabase.load(Config.INSTANCE.getBasePath()).getIDs();
 		mExtIPSet = CUtil.makeSet(mExtIPs);
-    	mIntIPs = InstanceDatabase.load(Config.INSTANCE.getIntBasePath()).getIPs();
-    	
-        loadTable();
+		
+		loadTable();
+		
+		Config.INSTANCE.setFeatureSet(Config.FEATURE_INT_DIR);
+    	mIntIPs = InstanceDatabase.load(Config.INSTANCE.getBasePath()).getIDs();
     }
 	
 	public List<String> getAttributes() {
@@ -120,7 +122,7 @@ public class PlotData {
 		
 		List<String> ipList = CUtil.makeList();
 		
-		Map<String, Map<String, Set<String>>> servWhoisIPs = mServDomainWhoisIPs.get(service);
+		Map<String, Map<String, Set<String>>> servWhoisIPs = mServDomainASNIPs.get(service);
 		if (servWhoisIPs == null) return ipList;
 		
 		Map<String, Set<String>> whoisIPs = servWhoisIPs.get(domain);
@@ -136,13 +138,12 @@ public class PlotData {
 		System.out.println("Reading plot ...");
 		
         mIPRecord = CUtil.makeMap();
-        mServDomainWhoisIPs = CUtil.makeMap();
+        mServDomainASNIPs = CUtil.makeMap();
         mDomainParents = new TreeMap<String, String>();
-        mWhoisParents = new TreeMap<String, String>();
         
         mServiceCount = new HistogramLong<String>();
         mDomainCount = new HistogramLong<String>();
-        mWhoisCount = new HistogramLong<String>();
+        mASNCount = new HistogramLong<String>();
         
         mAttributes = new IndexedList<String>(
         		"Bytes",
@@ -150,29 +151,23 @@ public class PlotData {
         		"Daily Regularity",
         		"Hourly Bins",
         		"Lexical Sim (Actual)",
-        		"Lexical Sim (Predicted)",
-        		"Semantic (Predicted)",
-        		"Strength (Predicted)"
+        		"Lexical Sim (Predicted)"
         		);
         
         CSVReader in = new CSVReader();
-//        IP,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
+//        ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
         in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_SUFFIX);
-//        IP,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
+//        ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
         in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_REPORT_SUFFIX);
-//        IP,hierarchy_stack,baseNorm_stack,class
-        in.add(Config.INSTANCE.getAllPredictedPath() + WekaPreprocess.CSV_SUFFIX);
-//        IP,score
+//        ID,lexical_norm,lexical_predicted,byte,byte_norm,mission_norm,exfiltration_norm
         in.add(Config.INSTANCE.getFinalResultPath());
         int i = 0;
         while (in.readLine()) {
-        	String ip = in.get("IP");
+        	String ip = in.get("ID");
         	String label = in.get("class");
             String serv = in.get("service");
             String domain = mDomainDB.getDomain(ip);
-            String whois = mDomainDB.getWhois(ip);
-            String semantic = in.get(2, "hierarchy_stack");
-            String strength = in.get(2, "baseNorm_stack");
+            String asn = mDomainDB.getASNNameOrNumber(ip);
             
             if (!mExtIPSet.contains(ip)) continue;
             
@@ -180,8 +175,8 @@ public class PlotData {
             	domain = NOT_AVAILABLE;
             }
             
-            if (whois == null || whois.isEmpty()) {
-            	whois = NOT_AVAILABLE;
+            if (asn == null || asn.isEmpty()) {
+            	asn = NOT_AVAILABLE;
             }
             
             float[] rec = new float[] {
@@ -190,37 +185,34 @@ public class PlotData {
             		Float.parseFloat(in.get("Bytes_Fourier0")),
             		Float.parseFloat(in.get("access_hours")),
             		(label.equals("?")) ? 0.0f : Float.parseFloat(label),
-                    Float.parseFloat(in.get(3, "score")),
-            		(semantic == null) ? 0.0f : Float.parseFloat(semantic),
-            		(strength == null) ? 0.0f : Float.parseFloat(strength)
+                    Float.parseFloat(in.get(2, "lexical_norm"))
             };
             
             if (!isAboveThrehold(rec)) continue;
             
             mIPRecord.put(ip, rec);
             
-            for (String servPart = serv; servPart != null; servPart = getParent(servPart)) {
+            for (String servPart = serv; servPart != null; servPart = getParent(servPart, null)) {
             	mServiceCount.increment(servPart);
             }
             
-            for (String domainPart = domain; domainPart != null; domainPart = getParent(domainPart)) {
+            for (String domainPart = domain; domainPart != null; domainPart = getParent(domainPart, ".")) {
             	mDomainCount.increment(domainPart);
             }
             
-            for (String whoisPart = whois; whoisPart != null; whoisPart = getParent(whoisPart)) {
-            	mWhoisCount.increment(whoisPart);
+            for (String asnPart = asn; asnPart != null; asnPart = getParent(asnPart, null)) {
+            	mASNCount.increment(asnPart);
             }
             
-            for (String servPart = serv; servPart != null; servPart = getParent(servPart)) {
-                for (String domainPart = domain; domainPart != null; domainPart = getParent(domainPart)) {
-                	for (String whoisPart = whois; whoisPart != null; whoisPart = getParent(whoisPart)) {
-                		updateMap(ip, servPart, domainPart, whoisPart);
+            for (String servPart = serv; servPart != null; servPart = getParent(servPart, null)) {
+                for (String domainPart = domain; domainPart != null; domainPart = getParent(domainPart, ".")) {
+                	for (String asnPart = asn; asnPart != null; asnPart = getParent(asnPart, null)) {
+                		updateMap(ip, servPart, domainPart, asnPart);
                 	}
                 }
             }
             
-            updateParents(domain, mDomainParents);
-            updateParents(whois, mWhoisParents);
+            updateParents(domain, mDomainParents, ".");
             
             if (++i % 100000 == 0) {
                 System.out.println((i / 1000) + "k IPs ...");
@@ -232,24 +224,26 @@ public class PlotData {
     }
     
 	private boolean isAboveThrehold(float[] rec) {
-//		return true;
-		double sqrt = Math.sqrt(rec[0] * rec[0] + rec[5] * rec[5]);
-		return sqrt > SIGNIFICANCE_THRESHOLD;
+		return true;
+//		double sqrt = Math.sqrt(rec[0] * rec[0] + rec[5] * rec[5]);
+//		return sqrt > SIGNIFICANCE_THRESHOLD;
 	}
 
-	private void updateParents(String path, Map<String, String> parents) {
-    	String parent = getParent(path);
+	private void updateParents(String path, Map<String, String> parents, String delim) {
+    	String parent = getParent(path, delim);
     	while (parent != null) {
     		parents.put(path, parent);
     		path = parent;
-    		parent = getParent(path);
+    		parent = getParent(path, delim);
     	}
 	}
 
-	private String getParent(String part) {
+	private String getParent(String part, String delim) {
 		if (TREE_ROOT_NAME.equals(part)) return null;
 		
-		int dot = part.indexOf(".");
+		if (delim == null) return TREE_ROOT_NAME;
+		
+		int dot = part.indexOf(delim);
 		if (dot < 0) {
 			return TREE_ROOT_NAME;
 		} else {
@@ -258,7 +252,7 @@ public class PlotData {
 	}
 
 	private void updateMap(String ip, String serv, String domain, String whois) {
-		Map<String, Set<String>> whoisIPs = getOrMakeMap(getOrMakeMap(mServDomainWhoisIPs, serv), domain);
+		Map<String, Set<String>> whoisIPs = getOrMakeMap(getOrMakeMap(mServDomainASNIPs, serv), domain);
 		Set<String> ips = whoisIPs.get(whois);
         if (ips == null) {
         	ips = CUtil.makeSet();
@@ -302,23 +296,27 @@ public class PlotData {
 		return getTreeModel(mDomainParents, mDomainCount);
 	}
 
-	public DefaultTreeModel getWhoisTree() {
-		return getTreeModel(mWhoisParents, mWhoisCount);
-	}
-
-	public DefaultTreeModel getServiceTree() {
-		List<String> list = CUtil.makeList(mServiceCount.keySet());
+	public DefaultTreeModel getStarTreeFromCount(HistogramLong<String> count) {
+		List<String> list = CUtil.makeList(count.keySet());
 		list.remove(TREE_ROOT_NAME);
 		Collections.sort(list);
 		
 		TreeNode root = new TreeNode(TREE_ROOT_NAME);
-		root.setCount(mServiceCount.get(TREE_ROOT_NAME));
+		root.setCount(count.get(TREE_ROOT_NAME));
 		for (String node : list) {
 			TreeNode c = new TreeNode(node);
-			c.setCount(mServiceCount.get(node));
+			c.setCount(count.get(node));
 			root.add(c);
 		}
 		return new DefaultTreeModel(root);
+	}
+	
+	public DefaultTreeModel getASNTree() {
+		return getStarTreeFromCount(mASNCount);
+	}
+
+	public DefaultTreeModel getServiceTree() {
+		return getStarTreeFromCount(mServiceCount);
 	}
 	
 	public int getTotalSize() {

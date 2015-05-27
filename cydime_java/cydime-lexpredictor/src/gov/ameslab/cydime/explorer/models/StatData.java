@@ -145,11 +145,14 @@ public class StatData {
 		mIntIPs = intIPs;
 		mIntIPSet = CUtil.makeSet(mIntIPs);
 		
+		Config.INSTANCE.setFeatureSet(Config.FEATURE_IP_DIR);
         loadExtTable();
-        loadIntTable();
         loadExtTimeseries();
-        loadIntTimeseries();
         loadGraph();
+        
+        Config.INSTANCE.setFeatureSet(Config.FEATURE_INT_DIR);
+        loadIntTable();
+        loadIntTimeseries();        
     }
 	
 	private void loadExtTable() throws IOException {
@@ -158,23 +161,19 @@ public class StatData {
         mExtIPRecord = CUtil.makeMap();
         
         CSVReader in = new CSVReader();
-//        IP,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
+//        ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
         in.add(Config.INSTANCE.getBasePath() + WekaPreprocess.CSV_REPORT_SUFFIX);
-//        IP,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
+//        ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
         in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_SUFFIX);
-//        IP,hierarchy_stack,baseNorm_stack,class
-        in.add(Config.INSTANCE.getAllPredictedPath() + WekaPreprocess.CSV_SUFFIX);
-//      IP,score
+//        ID,lexical_norm,lexical_predicted,byte,byte_norm,mission_norm,exfiltration_norm
         in.add(Config.INSTANCE.getFinalResultPath());
         int i = 0;
         while (in.readLine()) {
-        	String ip = in.get("IP");
+        	String ip = in.get("ID");
         	String label = in.get("class");
             String serv = in.get("service");
             String domain = mDomainDB.getDomain(ip);
-            String whois = mDomainDB.getWhois(ip);
-            String semantic = in.get(2, "hierarchy_stack");
-            String strength = in.get(2, "baseNorm_stack");
+            String asn = mDomainDB.getASNNameOrNumber(ip);
             
             if (!mExtIPSet.contains(ip)) continue;
             
@@ -182,19 +181,17 @@ public class StatData {
             	domain = NOT_AVAILABLE;
             }
             
-            if (whois == null || whois.isEmpty()) {
-            	whois = NOT_AVAILABLE;
+            if (asn == null || asn.isEmpty()) {
+            	asn = NOT_AVAILABLE;
             }
             
             Object[] rec = new Object[] {
             		(label.equals("?")) ? null : Double.parseDouble(label),  //label
-                    Double.parseDouble(in.get(3, "score")),
+                    Double.parseDouble(in.get(2, "lexical_norm")),
             		ip, //IP
-            		(semantic == null) ? null : Double.parseDouble(semantic),
-            		(strength == null) ? null : Double.parseDouble(strength),
             		serv, //service
             		domain, //domain
-            		whois, //whois
+            		asn, //asn
             		in.get("cc"),						//cc
             		(long) Double.parseDouble(in.get("total_records")),		//total_records			raw 
             		(long) Double.parseDouble(in.get("total_bytes")),		//total_bytes			raw
@@ -224,12 +221,12 @@ public class StatData {
         
         CSVReader in = new CSVReader();
         
-        in.add(Config.INSTANCE.getIntBasePath() + WekaPreprocess.CSV_REPORT_SUFFIX);
+        in.add(Config.INSTANCE.getBasePath() + WekaPreprocess.CSV_REPORT_SUFFIX);
         
-        in.add(Config.INSTANCE.getIntBaseNormPath() + WekaPreprocess.CSV_REPORT_SUFFIX);
+        in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_REPORT_SUFFIX);
         int i = 0;
         while (in.readLine()) {
-            String ip = in.get("IP");
+            String ip = in.get("ID");
             
             if (!mIntIPSet.contains(ip)) continue;
             
@@ -353,7 +350,7 @@ public class StatData {
         
         int i = 0;
         for (String feature : Config.INSTANCE.getFeaturePaths()) {
-	        BufferedReader in = new BufferedReader(new FileReader(feature + Config.INSTANCE.getIntServiceTimeSeries()));
+	        BufferedReader in = new BufferedReader(new FileReader(feature + Config.INSTANCE.getServiceTimeSeries()));
 	        String line = in.readLine();
 	        String prevIP = null;
 	        while ((line = in.readLine()) != null) {

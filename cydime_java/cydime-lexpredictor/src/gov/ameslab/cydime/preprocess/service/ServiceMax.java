@@ -70,10 +70,10 @@ public class ServiceMax extends FeatureSet {
 	
 	private static final String FLATTEN = ".Bytes";
 
-	private Map<String, String> mIPServices;
+	private Map<String, String> mIDServices;
 	
-	public ServiceMax(List<String> ipList, String inPath, String outPath) {
-		super(ipList, inPath, outPath);
+	public ServiceMax(List<String> ids, String inPath, String outPath) {
+		super(ids, inPath, outPath);
 	}
 
 	public InstanceDatabase run() throws IOException {
@@ -81,24 +81,24 @@ public class ServiceMax extends FeatureSet {
 		loadFlatten();
 		prepareInstances();
 		FileUtil.copy(mCurrentOutPath + WekaPreprocess.ALL_SUFFIX, mCurrentOutPath + WekaPreprocess.REPORT_SUFFIX);
-		return new InstanceDatabase(mCurrentOutPath, mAllIPs);
+		return new InstanceDatabase(mCurrentOutPath, mIDs);
 	}
 	
 	private void flatten() throws IOException {
 		Log.log(Level.INFO, "Processing services (Phase 1)...");
 
-		Map<String, Histogram<String>> ipServices = CUtil.makeMap();
+		Map<String, Histogram<String>> idServices = CUtil.makeMap();
 		for (String inPath : mFeaturePaths) {
 			BufferedReader in = new BufferedReader(new FileReader(inPath));
 			String line = in.readLine();
 			while ((line = in.readLine()) != null) {
 				String[] split = StringUtil.trimmedSplit(line, ",");
-				String ip = split[0];
+				String id = split[0];
 	
-				Histogram<String> services = ipServices.get(ip);
+				Histogram<String> services = idServices.get(id);
 				if (services == null) {
 					services = new Histogram<String>();
-					ipServices.put(ip, services);
+					idServices.put(id, services);
 				}
 				
 				//1.0.173.79,udp,udp/domain,2,2,435
@@ -113,7 +113,7 @@ public class ServiceMax extends FeatureSet {
 		}
 		
 		BufferedWriter out = new BufferedWriter(new FileWriter(mCurrentOutPath + FLATTEN));
-		for (Entry<String, Histogram<String>> entry : ipServices.entrySet()) {
+		for (Entry<String, Histogram<String>> entry : idServices.entrySet()) {
 			out.write(entry.getKey());
 			out.write(",");
 			out.write(entry.getValue().getMaxKeyByValue());
@@ -125,7 +125,7 @@ public class ServiceMax extends FeatureSet {
 	private void loadFlatten() throws IOException {
 		Log.log(Level.INFO, "Processing services (Phase 2)...");
 
-		mIPServices = FileUtil.readCSV(mCurrentOutPath + FLATTEN, false);
+		mIDServices = FileUtil.readCSV(mCurrentOutPath + FLATTEN, false);
 	}
 	
 	private void prepareInstances() throws IOException {
@@ -140,8 +140,8 @@ public class ServiceMax extends FeatureSet {
 				serviceSchema.toString()
 				); 
 		
-		for (String ip : mAllIPs) {
-			String serv = mIPServices.get(ip);
+		for (String id : mIDs) {
+			String serv = mIDServices.get(id);
 			out.writeValues(serv, "?");
 		}
 		

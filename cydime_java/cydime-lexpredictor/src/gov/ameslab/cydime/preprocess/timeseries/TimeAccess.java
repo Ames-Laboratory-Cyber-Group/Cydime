@@ -81,8 +81,8 @@ public class TimeAccess extends FeatureSet {
 
 	private Calendar mCal = GregorianCalendar.getInstance();
 
-	public TimeAccess(List<String> ipList, String inPath, String outPath) {
-		super(ipList, inPath, outPath);
+	public TimeAccess(List<String> ids, String inPath, String outPath) {
+		super(ids, inPath, outPath);
 	}
 
 	private int getDayOfYear(Date date) {
@@ -98,7 +98,7 @@ public class TimeAccess extends FeatureSet {
 	public InstanceDatabase run() throws IOException {
 		Log.log(Level.INFO, "Processing time access...");
 		
-		Set<String> allIPs = CUtil.makeSet();
+		Set<String> ids = CUtil.makeSet();
 		MapSet<Integer, String> daySet = new MapSet<Integer, String>();
 		Histogram<String> onWorkHours = new Histogram<String>();
 		Histogram<String> offWorkHours = new Histogram<String>();
@@ -108,17 +108,17 @@ public class TimeAccess extends FeatureSet {
 			String line = in.readLine();
 			while ((line = in.readLine()) != null) {
 				String[] split = StringUtil.trimmedSplit(line, ",");
-				String ip = split[0];
-				allIPs.add(ip);
+				String id = split[0];
+				ids.add(id);
 				long epoch = Long.parseLong(split[1]) * 1000;
 				Date date = new Date(epoch);
 				int dayOfYear = getDayOfYear(date);
-				daySet.add(dayOfYear, ip);
+				daySet.add(dayOfYear, id);
 				int hourOfDay = getHourOfDay(date);
 				if (hourOfDay >= WORK_BEGIN_HOUR && hourOfDay <= WORK_END_HOUR) {
-					onWorkHours.increment(ip);
+					onWorkHours.increment(id);
 				} else {
-					offWorkHours.increment(ip);
+					offWorkHours.increment(id);
 				}
 			}
 			in.close();
@@ -131,16 +131,16 @@ public class TimeAccess extends FeatureSet {
 				); 
 		
 		Set<Integer> days = daySet.keySet();
-		for (String ip : mAllIPs) {
+		for (String id : mIDs) {
 			int accessDays = 0;
 			for (int day : days) {
-				if (daySet.contains(day, ip)) {
+				if (daySet.contains(day, id)) {
 					accessDays++;
 				}
 			}
 			
-			int accessHours = (int) (onWorkHours.get(ip) + offWorkHours.get(ip));
-			double workhour_perc = onWorkHours.get(ip) / accessHours;
+			int accessHours = (int) (onWorkHours.get(id) + offWorkHours.get(id));
+			double workhour_perc = onWorkHours.get(id) / accessHours;
 			
 			out.writeValues(String.valueOf(accessHours),
 					String.valueOf(accessDays),
@@ -156,7 +156,7 @@ public class TimeAccess extends FeatureSet {
 		
 		FileUtil.copy(mCurrentOutPath + WekaPreprocess.ALL_SUFFIX, mCurrentOutPath + WekaPreprocess.REPORT_SUFFIX);
 		
-		return new InstanceDatabase(mCurrentOutPath, mAllIPs);
+		return new InstanceDatabase(mCurrentOutPath, mIDs);
 	}
 	
 }
