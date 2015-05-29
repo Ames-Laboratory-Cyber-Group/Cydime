@@ -150,22 +150,21 @@ public class PlotData {
         		"Peers",
         		"Daily Regularity",
         		"Hourly Bins",
-        		"Lexical Sim (Actual)",
-        		"Lexical Sim (Predicted)"
+        		"Lexical Sim",
+        		"Impact Score"
         		);
         
         CSVReader in = new CSVReader();
-//        ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
-        in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_SUFFIX);
-//        ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,class
+//		ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,avg_sim,var_sim,max_sim,class
+		in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_SUFFIX);
+//      ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,avg_sim,var_sim,max_sim,class
         in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_REPORT_SUFFIX);
-//        ID,lexical_norm,lexical_predicted,byte,byte_norm,mission_norm,exfiltration_norm
+//      ID,score
         in.add(Config.INSTANCE.getFinalResultPath());
         int i = 0;
         while (in.readLine()) {
         	String ip = in.get("ID");
-        	String label = in.get("class");
-            String serv = in.get("service");
+        	String serv = in.get("service");
             String domain = mDomainDB.getDomain(ip);
             String asn = mDomainDB.getASNNameOrNumber(ip);
             
@@ -184,8 +183,8 @@ public class PlotData {
             		Float.parseFloat(in.get("total_peercount")),
             		Float.parseFloat(in.get("Bytes_Fourier0")),
             		Float.parseFloat(in.get("access_hours")),
-            		(label.equals("?")) ? 0.0f : Float.parseFloat(label),
-                    Float.parseFloat(in.get(2, "lexical_norm"))
+					Float.parseFloat(in.get("max_sim")),
+					Float.parseFloat(in.get(2, "score"))
             };
             
             if (!isAboveThrehold(rec)) continue;

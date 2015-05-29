@@ -140,7 +140,7 @@ public class StatFrame extends javax.swing.JFrame {
 
             },
             new String [] {
-                "Label", "Predicted", "IP", "Top Service", "Domain", "ASN", "Country", "Records", "Bytes", "Peers", "Src Ports", "Dest Ports", "Daily Regularity", "Weekly Regularity", "Access Hours", "Access Days", "Workhour Ratio"
+                "Impact", "Lexical Sim", "IP", "Top Service", "Domain", "ASN", "Country", "Records", "Bytes", "Peers", "Src Ports", "Dest Ports", "Daily Regularity", "Weekly Regularity", "Access Hours", "Access Days", "Workhour Ratio"
             }
         ) {
             Class[] types = new Class [] {
@@ -163,8 +163,6 @@ public class StatFrame extends javax.swing.JFrame {
         jScrollPane3.setViewportView(tblExt);
         tblExt.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         if (tblExt.getColumnModel().getColumnCount() > 0) {
-            tblExt.getColumnModel().getColumn(0).setPreferredWidth(40);
-            tblExt.getColumnModel().getColumn(1).setPreferredWidth(40);
             tblExt.getColumnModel().getColumn(2).setPreferredWidth(150);
             tblExt.getColumnModel().getColumn(4).setPreferredWidth(300);
             tblExt.getColumnModel().getColumn(5).setPreferredWidth(200);
