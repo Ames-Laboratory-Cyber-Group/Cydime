@@ -54,7 +54,7 @@ class CydimeModel(object):
     def run(self):
         '''run model using command_base
         '''
-        command = self.command_base + ' gov.ameslab.cydime.predictor.CydimePredictor '
+        command = self.command_base + ' gov.ameslab.cydime.ranker.CydimeRanker '
         command += self.date_path
         self.exec_command(command)
 
