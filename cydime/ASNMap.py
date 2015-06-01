@@ -59,6 +59,9 @@ def asn_binsearch(addr, alist, lo=0, hi=None):
     '''
     hi  = hi if hi is not None else len(alist)
     pos = bisect_left(alist, addr, lo, hi)
+    # following if condition to avoid index out of bounds - verify!!
+    if pos == len(alist):
+        pos -= 1
     pos = pos if alist[pos] == addr else pos - 1
 
     return pos if pos != hi and alist[pos] == addr else None
