@@ -97,7 +97,10 @@ def run_server():
                                 server_cert))        
         reactor.run(installSignalHandlers=True)
     except Exception as e:
-        err = 'Error: {0} {1}'.format(e.message, ' '.join(e.__doc__.split()))
+        if e.__doc__ is not None:
+            err = 'Error: {0} {1}'.format(e.message, ' '.join(e.__doc__.split()))
+        else :
+            err = 'Error: {0}'.format(e.message)
         logging.error(err)
 
 if __name__ == '__main__':
