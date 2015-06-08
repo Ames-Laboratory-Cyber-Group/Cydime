@@ -4,6 +4,7 @@ Manage building of Netflow statistical features.
 
 import logging
 from subprocess import Popen, PIPE
+import os
 
 import Netflow as NF
 
@@ -34,6 +35,16 @@ def cleanup_tmp_files(path):
     output, error = p.communicate()
     if error:
         logging.error(error)
+
+def display_feature_files_info(path):
+    '''get the number of records in each of the features files'''
+    full_path = path+"/features/ip/"
+    for i in os.listdir(full_path):
+        p = Popen(['wc', '-l', full_path+i], stdout=PIPE,stderr=PIPE)
+        result, error = p.communicate()
+        if error:
+            logging.error(error)
+        logging.info("Number of records in file {0} : {1}".format(i, result.strip().split()[0]))
 
 # XXX Yuck!  Clean this up.
 def build_netflow_features(path, in_filter, out_filter):
