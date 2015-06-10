@@ -18,6 +18,7 @@ or fewer by using the Poisson probability mass function.
 
 import logging
 import math
+import traceback
 
 from scipy.stats import poisson
 from numpy import ndarray,array
@@ -175,7 +176,15 @@ def build_alert_scores(alist, notFound=False):
                 try:
                     conv_ip = Com.convert_ip_to_long(ip)
                 except socket.error as e:
+                    logging.error(e)
+                    logging.error("Type of Exception : socket.error")
+                    logging.error(traceback.format_exc())
                     logging.error('Invalid IP {0} returned from database while building threshold.'.format(ip))
+                    continue
+                except Exception as ex:
+                    logging.error(ex)
+                    logging.error("Type of Exception : {0}".format(type(ex).__name__))
+                    logging.error(traceback.format_exc())
                     continue
 
                 db_string = select([cydime_default.c.score]).where\

@@ -1,7 +1,7 @@
 '''
 Manage building of Netflow statistical features.
 '''
-
+import traceback
 import logging
 from subprocess import Popen, PIPE
 import os
@@ -57,6 +57,8 @@ def display_feature_files_info(path,date_list):
             return False
     except Exception as e:
         logging.error(e)
+        logging.error("Type of Exception : {0}".format(type(e).__name__))
+        logging.error(traceback.format_exc())
         logging.error("Due to the above Exception, Fetching past scores")
         get_past_scores(date_list)
         return False

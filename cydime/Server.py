@@ -1,5 +1,6 @@
 import logging
 import os
+import traceback
 
 from twisted.internet import ssl, reactor
 from twisted.internet.protocol import Factory, Protocol
@@ -102,6 +103,8 @@ def run_server():
         else :
             err = 'Error: {0}'.format(e.message)
         logging.error(err)
+        logging.error("Type of Exception : {0}".format(type(e).__name__))
+        logging.error(traceback.format_exc())
 
 if __name__ == '__main__':
     run_server()

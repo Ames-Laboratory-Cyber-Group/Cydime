@@ -3,6 +3,7 @@ Cydime database functions.
 '''
 
 import logging
+import traceback
 
 from sqlalchemy import Table, Column, Integer, BigInteger, Sequence, Float 
 from sqlalchemy import create_engine, MetaData
@@ -49,7 +50,14 @@ def get_cydime_db_engine():
 
         metadata.create_all(engine)
     except SQLAlchemyError as e:
+        logging.error(e)
+        logging.error("Type of Exception : SQLAlchemyError")
+        logging.error(traceback.format_exc())
         raise CydimeDatabaseException(e.message)
+    except Exception as e:
+        logging.error(e)
+        logging.error("Type of Exception : {0}".format(type(e).__name__))
+        logging.error(traceback.format_exc())
 
     return (engine, cydime_default)
 
@@ -83,7 +91,14 @@ def get_alert_db_engine():
         engine = create_engine(db_string, echo=False)
         table = Table(Conf.alert_db_table, meta, autoload=True, autoload_with=engine)
     except SQLAlchemyError as e:
+        logging.error(e)
+        logging.error("Type of Exception : SQLAlchemyError")
+        logging.error(traceback.format_exc())
         raise CydimeDatabaseException(e.message)
+    except Exception as e:
+        logging.error(e)
+        logging.error("Type of Exception : {0}".format(type(e).__name__))
+        logging.error(traceback.format_exc())
 
     return (engine, table)
 
@@ -111,6 +126,13 @@ def insert_scores(path):
             conn.execute(table.insert(), add_list)
             logging.info('Made predictions for {0} IPs'.format(add_count))
         except SQLAlchemyError as e:
+            logging.error(e)
+            logging.error("Type of Exception : SQLAlchemyError")
+            logging.error(traceback.format_exc())
             raise CydimeDatabaseException(e.message)
+        except Exception as e:
+            logging.error(e)
+            logging.error("Type of Exception : {0}".format(type(e).__name__))
+            logging.error(traceback.format_exc())
 
     conn.close()

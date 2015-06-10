@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 from sqlalchemy import Table, Column, BigInteger, Integer, Sequence, Date, String, Boolean
 from sqlalchemy import create_engine, MetaData
@@ -52,7 +53,14 @@ def get_db_engine():
 
         metadata.create_all(engine)
     except SQLAlchemyError as e:
+        logging.error(e)
+        logging.error("Type of Exception : SQLAlchemyError")
+        logging.error(traceback.format_exc())
         raise
+    except Exception as e:
+        logging.error(e)
+        logging.error("Type of Exception : {0}".format(type(e).__name__))
+        logging.error(traceback.format_exc())
 
     return (engine, tmp_table, scraper_table)
 

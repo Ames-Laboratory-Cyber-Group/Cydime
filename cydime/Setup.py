@@ -21,6 +21,10 @@ def setup_logging():
             exc_lines = traceback.format_exc().splitlines()
             raise SystemExit('Failed to create log directory.\n{0}'\
                         .format(exc_lines[-1]))
+    except Exception as ex :
+        logging.error(ex)
+        logging.error("Type of Exception : {0}".format(type(ex).__name__))
+        logging.error(traceback.format_exc())
 
     # check the log_level user has set 
     # default to INFO if a invalid level was chosen
@@ -37,7 +41,10 @@ def setup_logging():
             level=level,
         )
         logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
-    except Exception:
+    except Exception as ex:
+        logging.error(ex)
+        logging.error("Type of Exception : {0}".format(type(ex).__name__))
+        logging.error(traceback.format_exc())
         exc_lines = traceback.format_exc().splitlines()
         raise SystemExit('Cannot write to log file.\n{0}'\
                     .format(exc_lines[-1]))

@@ -7,6 +7,7 @@ import socket
 import shutil
 import smtplib
 import struct
+import traceback
 import tarfile
 
 from datetime import timedelta
@@ -30,10 +31,17 @@ def create_directory(full_path):
     try:
         makedirs(full_path)
     except OSError as e:
+        logging.error(e)
+        logging.error("Type of Exception : OSError")
+        logging.error(traceback.format_exc())
         if e.errno != errno.EEXIST:
             logging.error('Could not create directory: {0}'\
                             .format(full_path))
             raise
+    except Exception as e :
+        logging.error(e)
+        logging.error("Type of Exception : {0}".format(type(e).__name__))
+        logging.error(traceback.format_exc())
 
 def convert_ip_to_long(ip):
     '''Convert IP address from 'xxx.xxx.xxx.xxx' format to long int.
@@ -85,16 +93,30 @@ def check_ipv4_addr(ip):
     '''
     try:
         ip = ip.rstrip('\n').split('.')
-    except AttributeError:
+    except AttributeError as e:
+        logging.error(e)
+        logging.error("Type of Exception : AttributeError")
+        logging.error(traceback.format_exc())
         return False
+    except Exception as e :
+        logging.error(e)
+        logging.error("Type of Exception : {0}".format(type(e).__name__))
+        logging.error(traceback.format_exc())
     try:
         for x in xrange(len(ip)):
             for c in ip[x]:
                 if c in whitespace:
                     raise ValueError
         return len(ip) == 4 and all(int(octet) < 256 for octet in ip)
-    except ValueError:
+    except ValueError as e:
+        logging.error(e)
+        logging.error("Type of Exception : ValueError")
+        logging.error(traceback.format_exc())
         return False
+    except Exception as e :
+        logging.error(e)
+        logging.error("Type of Exception : {0}".format(type(e).__name__))
+        logging.error(traceback.format_exc())
 
 def on_static_whitelist(ip):
     '''Return true iff ip is in the static_whitelist file.
@@ -279,10 +301,16 @@ def get_daily_report(full_path):
         with open(full_path + '/' + Conf.result_file) as f:
             text = f.read()
     except IOError as e:
+        logging.error(e)
+        logging.error("Type of Exception : IOError")
+        logging.error(traceback.format_exc())
         if e.errno != errno.ENOENT:
             raise
         text = "Report file not found.  Time to do some labeling?"
-
+    except Exception as e :
+        logging.error(e)
+        logging.error("Type of Exception : {0}".format(type(e).__name__))
+        logging.error(traceback.format_exc())
     return text
 
 def compress_dir(old_date):
@@ -313,7 +341,7 @@ def delete_old_filters(old_date):
         os.remove(path + '/filter/out.silkFilter')
 
 def compute_number_of_lines(path):
-    p = Popen(['wc', '-l', path], stdout=PIPE,stderr=PIPE)
+    p = Popen(['/usr/bin/wc', '-l', path], stdout=PIPE,stderr=PIPE)
     result, error = p.communicate()
     if error:
         logging.error("Error in computing the lines in the file {0} : {1}".format(path,error))
@@ -348,4 +376,7 @@ def get_past_scores(date_list):
                     break
     except Exception as e:
         logging.error("Error in copying past scores  : " + e.message)
+        logging.error("Type of Exception : {0}".format(type(e).__name__))
+        logging.error(traceback.format_exc())
+
 

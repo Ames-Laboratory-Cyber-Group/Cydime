@@ -5,6 +5,7 @@ Other files import config values from Config.py as needed.
 '''
 
 import traceback
+import logging
 
 from ConfigParser import SafeConfigParser
 
@@ -70,7 +71,10 @@ err = 'Fatal Error in config file: cydime not started\n'
 config = SafeConfigParser()
 try:
     config.read('/etc/cydime/cydime.conf')
-except Exception:
+except Exception as ex:
+    logging.error(ex)
+    logging.error("Type of Exception : {0}".format(type(ex).__name__))
+    logging.error(traceback.format_exc())
     raise SystemExit('{0}{1}.'.format(err, traceback.print_exc()))
 
 try:
@@ -180,8 +184,11 @@ try:
                 REQUIRED['exclude_set_path'], 'exclude_set_path')
 
 
-except Exception:
+except Exception as ex:
     exc_lines = traceback.format_exc().splitlines()
+    logging.error(ex)
+    logging.error("Type of Exception : {0}".format(type(ex).__name__))
+    logging.error(traceback.format_exc())
     raise SystemExit('{0}{1}'.format(err, exc_lines[-1]))
 
 if __name__ == '__main__':

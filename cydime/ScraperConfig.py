@@ -55,7 +55,10 @@ err = 'Fatal Error in config file: scraper not started\n'
 config = SafeConfigParser()
 try:
     config.read('/etc/cydime/scraper.conf')
-except Exception:
+except Exception as e:
+    logging.error(e)
+    logging.error("Type of Exception : {0}".format(type(e).__name__))
+    logging.error(traceback.format_exc())
     raise SystemExit('{0}{1}.'.format(err, traceback.print_exc()))
 
 try:
@@ -139,7 +142,10 @@ try:
                 REQUIRED['lexical.mission.sim'], 'lexical.mission.sim')
     crawler_mission_sim = config.get(
                 REQUIRED['crawler.mission.sim'], 'crawler.mission.sim')
-except Exception:
+except Exception as e:
+    logging.error(e)
+    logging.error("Type of Exception : {0}".format(type(e).__name__))
+    logging.error(traceback.format_exc())
     exc_lines = traceback.format_exc().splitlines()
     raise SystemExit('{0}{1}'.format(err, exc_lines[-1]))
 

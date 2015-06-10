@@ -1,5 +1,6 @@
 import logging
 import sys
+import traceback
 
 from datetime import date, datetime, timedelta
 
@@ -58,7 +59,7 @@ def calc_date(end, interval):
 def verify_rwflow_daemon():
     '''Verify if the rwflowpack daemon which processes the netflows is running in the background
     '''
-    command = "ps aux "
+    command = "/bin/ps aux "
     p = Popen(command.split(), stdout=PIPE, stderr=PIPE)
     output, error = p.communicate()
     if error:
@@ -136,19 +137,25 @@ def build(end, interval=None, update=True, mail=False, initial=False):
             update_threshold(full_path, current_date)
 
         # only send email on automated builds
-        if mail:
-            Com.send_email(Com.get_daily_report(full_path), 'Cydime-Dev Update')
+        #if mail:
+        #    Com.send_email(Com.get_daily_report(full_path), 'Cydime-Dev Update')
         Com.delete_old_filters(start_date)
         if Conf.compress_old_data:
             Com.compress_dir(start_date)
-    except AssertionError as assertError:
+    except AssertionError:
+        if not mail:
+            raise
+        Com.send_email('Uh-oh, Cydime-Dev had an error: Assertion Errors', 'Cydime-Dev ERROR')
         logging.error("Assertion Errors : Using the past scores and stopping build due to unexpected behaviour")
-    except Exception as e:
+        logging.error(traceback.format_exc())
+    except Exception as ex:
         # no need to email if doing manual build
         if not mail:
             raise
-        Com.send_email('Uh-oh, Cydime-Dev had an error: {0}'.format(e), 'Cydime-Dev ERROR')
-        logging.error(e)
+        Com.send_email('Uh-oh, Cydime-Dev had an error: {0}'.format(ex), 'Cydime-Dev ERROR')
+        logging.error(ex)
+        logging.error("Type of Exception : {0}".format(type(ex).__name__))
+        logging.error(traceback.format_exc())
 
 if __name__ == '__main__':
     import argparse
@@ -171,8 +178,15 @@ if __name__ == '__main__':
     try:
         if args.end:
             args.end = datetime.strptime(args.end.replace('/', '-'), '%Y-%m-%d')
-    except ValueError:
+    except ValueError as ve:
+        logging.error(ve)
+        logging.error("Type of Exception : ValueError")
+        logging.error(traceback.format_exc())
         raise ValueError('Incorrectly formatted end date.')
+    except Exception as e :
+        logging.error(e)
+        logging.error("Type of Exception : {0}".format(type(e).__name__))
+        logging.error(traceback.format_exc())
 
     if not args.end:
         args.end = date.today()

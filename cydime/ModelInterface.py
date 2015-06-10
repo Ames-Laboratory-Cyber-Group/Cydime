@@ -3,6 +3,7 @@ Call the Java ML model.
 '''
 
 import logging
+import traceback
 
 from subprocess import Popen, PIPE
 
@@ -73,5 +74,7 @@ class CydimeModel(object):
                 logging.error(error)
         except Exception as e:
             logging.error(e)
+            logging.error("Type of Exception : {0}".format(type(e).__name__))
+            logging.error(traceback.format_exc())
             raise
 

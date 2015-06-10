@@ -6,6 +6,7 @@ import errno
 import logging
 import os
 import sys
+import traceback
 
 from datetime import datetime, timedelta
 from subprocess import Popen, PIPE
@@ -48,6 +49,8 @@ def display_filter_files_info(full_path):
         logging.info('Size(bytes) of out.silkFilter : '+str(os.path.getsize(out_dst)))
     except Exception as e:
         logging.error(e)
+        logging.error("Type of Exception : {0}".format(type(e).__name__))
+        logging.error(traceback.format_exc())
 
 def filter_records(full_path, start_date, end_date, date_list):
     '''
