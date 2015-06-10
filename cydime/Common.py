@@ -16,6 +16,7 @@ from string import whitespace
 
 from sqlalchemy.sql import select
 from netaddr import IPNetwork, IPAddress
+from subprocess import Popen, PIPE
 
 import Config as Conf
 
@@ -311,6 +312,15 @@ def delete_old_filters(old_date):
     if os.path.isfile(path + '/filter/out.silkFilter'):
         os.remove(path + '/filter/out.silkFilter')
 
+def compute_number_of_lines(path):
+    p = Popen(['wc', '-l', path], stdout=PIPE,stderr=PIPE)
+    result, error = p.communicate()
+    if error:
+        logging.error("Error in computing the lines in the file {0} : {1}".format(path,error))
+        return 0
+    else :
+        return int(result.strip().split()[0])
+
 def date_to_path(current_date):                                                                                   
     '''Convert current_date to file path.
 
@@ -320,3 +330,22 @@ def date_to_path(current_date):
     :returns: str -- full path to directory for current date
     '''
     return Conf.data_dir + '/' + str(current_date).replace('-', '/')
+
+def get_past_scores(date_list):
+    '''Fetch the latest scores from the past 2 weeks and use them for the current date's scores in case of
+     build failures/errors
+    '''
+    try :
+        for i in xrange(len(date_list)):
+            full_path = '{0}/{1}/report/ip/cydime.scores'.format(Conf.data_dir, date_list[i])
+            if os.path.isfile(full_path):
+                number = compute_number_of_lines(full_path)
+                if number <=1 :
+                    continue
+                else:
+                    shutil.copyfile(full_path,'{0}/{1}/report/ip/cydime.scores'.format(Conf.data_dir, date_list[0]))
+                    logging.info("Copied the cydime scores of date : {0}".format(date_list[i]))
+                    break
+    except Exception as e:
+        logging.error("Error in copying past scores  : " + e.message)
+

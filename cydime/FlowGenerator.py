@@ -41,11 +41,13 @@ def display_filter_files_info(full_path):
     '''
     Display the size and other information about the in.silkFilter and out.silkFilter files
     '''
-    out_dst = full_path + '/filter/' + 'out.silkFilter'
-    in_dst = full_path + '/filter/' + 'in.silkFilter'
-    logging.info('Size(bytes) of in.silkFilter : '+str(os.path.getsize(in_dst)))
-    logging.info('Size(bytes) of out.silkFilter : '+str(os.path.getsize(out_dst)))
-
+    try:
+        out_dst = full_path + '/filter/' + 'out.silkFilter'
+        in_dst = full_path + '/filter/' + 'in.silkFilter'
+        logging.info('Size(bytes) of in.silkFilter : '+str(os.path.getsize(in_dst)))
+        logging.info('Size(bytes) of out.silkFilter : '+str(os.path.getsize(out_dst)))
+    except Exception as e:
+        logging.error(e)
 
 def filter_records(full_path, start_date, end_date, date_list):
     '''

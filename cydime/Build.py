@@ -92,57 +92,57 @@ def build(end, interval=None, update=True, mail=False, initial=False):
         full_path = Conf.data_dir + '/' + end_date
 
         create_daily_dirs(full_path)
-        if verify_rwflow_daemon():
+        assert verify_rwflow_daemon(),"rwflowpack daemon is not running in the background. Hence stopping build in order to avoid undefined behavior!"
 
-            filter_records(full_path, start_date, end_date, date_list)
-            logging.info('Filtered records from {0} to {1}'.format(start_date, end_date))
+        filter_records(full_path, start_date, end_date, date_list)
+        logging.info('Filtered records from {0} to {1}'.format(start_date, end_date))
 
-            display_filter_files_info(full_path)
+        display_filter_files_info(full_path)
 
-            # XXX Need way to abstract the 'silkFilter' name to whatever backend
-            # used this should be done in FlowGenerator.py
-            build_installed_features(full_path,
-                                     full_path + '/filter/in.silkFilter',
-                                     full_path + '/filter/out.silkFilter')
-            logging.info('Features built for {0}'.format(end_date))
-            display_feature_files_info(full_path)
+        # XXX Need way to abstract the 'silkFilter' name to whatever backend
+        # used this should be done in FlowGenerator.py
+        build_installed_features(full_path,
+                                 full_path + '/filter/in.silkFilter',
+                                 full_path + '/filter/out.silkFilter')
+        logging.info('Features built for {0}'.format(end_date))
+        assert display_feature_files_info(full_path,date_list)
 
-            # do asn lookups (read from full netflow)
-            # args: ip fileame, asn filename, output filename
-            ASNMap.build_asn_map(full_path + '/features/ip/full_netflow.features',
-                                 '/cydime_data/maps/GeoIPASNum2.csv',
-                                 full_path + '/preprocess/ipASNMap.csv')
-            logging.info('AS map built for {0}'.format(end_date))
-            # do hostname lookups (read from full netflow)
-            # args: ipFile, outFile
-            HostMap.buildHostMap(full_path + '/features/ip/full_netflow.features',
-                                 full_path + '/preprocess/ipHostMap.csv')
-            logging.info('Host map built for {0}'.format(end_date))
-            # build asn features
-            # we're done if this is an initial build
-            if initial:
-                return
+        # do asn lookups (read from full netflow)
+        # args: ip fileame, asn filename, output filename
+        ASNMap.build_asn_map(full_path + '/features/ip/full_netflow.features',
+                             '/cydime_data/maps/GeoIPASNum2.csv',
+                             full_path + '/preprocess/ipASNMap.csv')
+        logging.info('AS map built for {0}'.format(end_date))
+        # do hostname lookups (read from full netflow)
+        # args: ipFile, outFile
+        HostMap.buildHostMap(full_path + '/features/ip/full_netflow.features',
+                             full_path + '/preprocess/ipHostMap.csv')
+        logging.info('Host map built for {0}'.format(end_date))
+        # build asn features
+        # we're done if this is an initial build
+        if initial:
+            return
 
-            m = CydimeModel(end_date)
-            m.build()
-            logging.info('Model successfully built on {0}'.format(end_date))
+        m = CydimeModel(end_date)
+        m.build()
+        logging.info('Model successfully built on {0}'.format(end_date))
 
-            logging.info('score_file: {0}'.format(Conf.score_file))
+        logging.info('score_file: {0}'.format(Conf.score_file))
 
-            # only update score db and threshold if we're doing
-            # an automated build or we explicitly say to
-            if update:
-                insert_scores(full_path)
-                update_threshold(full_path, current_date)
+        # only update score db and threshold if we're doing
+        # an automated build or we explicitly say to
+        if update:
+            insert_scores(full_path)
+            update_threshold(full_path, current_date)
 
-            # only send email on automated builds
-            if mail:
-                Com.send_email(Com.get_daily_report(full_path), 'Cydime-Dev Update')
-            Com.delete_old_filters(start_date)
-            if Conf.compress_old_data:
-                Com.compress_dir(start_date)
-        else :
-            logging.error("rwflowpack daemon is not running in the background. Hence stopping Cydime in order to avoid undefined behavior")
+        # only send email on automated builds
+        if mail:
+            Com.send_email(Com.get_daily_report(full_path), 'Cydime-Dev Update')
+        Com.delete_old_filters(start_date)
+        if Conf.compress_old_data:
+            Com.compress_dir(start_date)
+    except AssertionError as assertError:
+        logging.error("Assertion Errors : Using the past scores and stopping build due to unexpected behaviour")
     except Exception as e:
         # no need to email if doing manual build
         if not mail:

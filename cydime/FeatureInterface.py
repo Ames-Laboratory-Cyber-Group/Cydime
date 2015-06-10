@@ -9,6 +9,7 @@ import os
 import Netflow as NF
 
 from Common import create_directory
+from Common import get_past_scores,compute_number_of_lines
 
 def build_installed_features(path, in_filter, out_filter):
     '''Build feature modules user has installed.
@@ -36,15 +37,30 @@ def cleanup_tmp_files(path):
     if error:
         logging.error(error)
 
-def display_feature_files_info(path):
+def display_feature_files_info(path,date_list):
     '''get the number of records in each of the features files'''
     full_path = path+"/features/ip/"
-    for i in os.listdir(full_path):
-        p = Popen(['wc', '-l', full_path+i], stdout=PIPE,stderr=PIPE)
-        result, error = p.communicate()
-        if error:
-            logging.error(error)
-        logging.info("Number of records in file {0} : {1}".format(i, result.strip().split()[0]))
+    try:
+        list_of_files = os.listdir(full_path)
+        if len(list_of_files) != 0 :
+            for i in list_of_files:
+                if i != "full_netflow.features":
+                    number = compute_number_of_lines(full_path+i)
+                    logging.info("Number of records in file {0} : {1}".format(i, str(number)))
+                    if number <=1 :
+                        logging.error("Features files have no data. Hence using the past scores")
+                        get_past_scores(date_list)
+                        return False
+        else :
+            logging.error("Feature files have not been created. Hence using the past scores")
+            get_past_scores(date_list)
+            return False
+    except Exception as e:
+        logging.error(e)
+        logging.error("Due to the above Exception, Fetching past scores")
+        get_past_scores(date_list)
+        return False
+    return True
 
 # XXX Yuck!  Clean this up.
 def build_netflow_features(path, in_filter, out_filter):
