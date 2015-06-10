@@ -122,7 +122,7 @@ public class CydimeRanker {
 		}
 
 		Instances wekaTrain = baseNorm.getWekaTrain();
-		AbstractClassifier c = RankerFactory.makeLogistic();
+		AbstractClassifier c = RankerFactory.makeAdaBoostM1();
 		c.buildClassifier(wekaTrain);
 		
 		Map<String, Double> pred = CUtil.makeMap();

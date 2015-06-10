@@ -85,33 +85,36 @@ public class CydimeRankerExp {
 			RankerFactory.makeFeatureProjector(3),
 			RankerFactory.makeFeatureProjector(10),
 			RankerFactory.makeFeatureProjector(12),
-			RankerFactory.makeFeatureProjector(14),
+			RankerFactory.makeFeatureProjector(30),
 			RankerFactory.makeFeatureProjector(31),
 			RankerFactory.makeFeatureProjector(32),
 			
-			RankerFactory.makeOneClass(),
-
 			RankerFactory.makeNaiveBayes(),
 			RankerFactory.makeLogistic(),
 			RankerFactory.makeREPTree(),
-			RankerFactory.makeLibLINEAR(),			
 			RankerFactory.makeLibSVM(),
-									
-//			RankerFactory.makeResampleEnsemble(RankerFactory.makeLogistic(1), 1.0),
-//			RankerFactory.makeResampleEnsemble(RankerFactory.makeNaiveBayes(1), 1.0),
-//			RankerFactory.makeResampleEnsemble(RankerFactory.makeLibLINEAR(1), 1.0),
-//			RankerFactory.makeResampleEnsemble(RankerFactory.makeKernelLogisticPoly(1), 1.0),
-//			RankerFactory.makeResampleEnsemble(RankerFactory.makeKernelLogisticRBF(1), 1.0),
-//			RankerFactory.makeResampleEnsemble(RankerFactory.makeLibSVM(1), 1.0),
-//			RankerFactory.makeResampleEnsemble(RankerFactory.makeLibSVMNu(1), 1.0),
+			RankerFactory.makeRandomForest(),			
+			RankerFactory.makeAdaBoostM1(),
+	};
+	
+	private AbstractClassifier[] mAlgorithmsU = new AbstractClassifier[] {
+			RankerFactory.makeRandomRanker(),
 			
-//			RankerFactory.makeResampleEnsemble(RankerFactory.makeLogistic(10), 1.0, new Random(1)),
-//			RankerFactory.makeResampleEnsemble(RankerFactory.makeNaiveBayes(10), 1.0, new Random(1)),
-//			RankerFactory.makeResampleEnsemble(RankerFactory.makeLibLINEAR(10), 1.0, new Random(1)),
-//			RankerFactory.makeResampleEnsemble(RankerFactory.makeKernelLogisticPoly(10), 1.0, new Random(1)),
-//			RankerFactory.makeResampleEnsemble(RankerFactory.makeKernelLogisticRBF(10), 1.0, new Random(1)),
-//			RankerFactory.makeResampleEnsemble(RankerFactory.makeLibSVM(10), 1.0, new Random(1)),
-//			RankerFactory.makeResampleEnsemble(RankerFactory.makeLibSVMNu(10), 1.0, new Random(1)),
+			RankerFactory.makeFeatureProjector(2),
+			RankerFactory.makeFeatureProjector(3),
+			RankerFactory.makeFeatureProjector(10),
+			RankerFactory.makeFeatureProjector(12),
+			RankerFactory.makeFeatureProjector(30),
+			RankerFactory.makeFeatureProjector(31),
+			RankerFactory.makeFeatureProjector(32),
+			
+			RankerFactory.makeNaiveBayes(),
+			RankerFactory.makeLogistic(),
+			RankerFactory.makeREPTree(),
+//			RankerFactory.makeLibSVM(),
+			RankerFactory.makeResampleEnsemble(RankerFactory.makeLibSVM(10), 1.0, new Random(1)),
+			RankerFactory.makeRandomForest(),			
+			RankerFactory.makeAdaBoostM1(),
 	};
 	
 	private RankEvaluator[] mEvaluators = new RankEvaluator[] {
@@ -161,13 +164,13 @@ public class CydimeRankerExp {
 			List<String> blackSample = blackLabel.getNextSample();
 			LabelSplit split = new LabelSplit(ips, whiteSample, blackSample, TRAIN_PERCENT, mLabelPercentage, new Random(run));
 			run00(run, split);
-//			runU0(run, split);
-//			runUU(run, split);
+			runU0(run, split);
+			runUU(run, split);
 		}
 		
 		summarize("00");
-//		summarize("U0");
-//		summarize("UU");
+		summarize("U0");
+		summarize("UU");
 	}
 
 	private void printStats(List<String> ips, List<List<String>> white, List<List<String>> black) {
@@ -233,15 +236,15 @@ public class CydimeRankerExp {
 		}
 
 		Instances wekaTrain = baseNorm.getWekaTrain();
-		for (int i = 0; i < mAlgorithms.length; i++) {
+		for (int i = 0; i < mAlgorithmsU.length; i++) {
 			Log.log(Level.INFO, "Building {0}...", i);
 			
-			mAlgorithms[i].buildClassifier(wekaTrain);
+			mAlgorithmsU[i].buildClassifier(wekaTrain);
 			
 			Map<String, Double> preds = CUtil.makeMap();
 			for (String ip : split.getTestKnown()) {
 				Instance inst = baseNorm.getWekaInstance(ip);
-				double dist[] = mAlgorithms[i].distributionForInstance(inst);
+				double dist[] = mAlgorithmsU[i].distributionForInstance(inst);
 				preds.put(ip, dist[1]);
 			}
 			
@@ -263,15 +266,15 @@ public class CydimeRankerExp {
 		}
 
 		Instances wekaTrain = baseNorm.getWekaTrain();
-		for (int i = 0; i < mAlgorithms.length; i++) {
+		for (int i = 0; i < mAlgorithmsU.length; i++) {
 			Log.log(Level.INFO, "Building {0}...", i);
 			
-			mAlgorithms[i].buildClassifier(wekaTrain);
+			mAlgorithmsU[i].buildClassifier(wekaTrain);
 			
 			Map<String, Double> preds = CUtil.makeMap();
 			for (String ip : split.getTestAll()) {
 				Instance inst = baseNorm.getWekaInstance(ip);
-				double dist[] = mAlgorithms[i].distributionForInstance(inst);
+				double dist[] = mAlgorithmsU[i].distributionForInstance(inst);
 				preds.put(ip, dist[1]);
 			}
 			
