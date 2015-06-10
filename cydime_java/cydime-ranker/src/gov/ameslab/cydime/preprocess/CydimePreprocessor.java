@@ -158,10 +158,10 @@ public class CydimePreprocessor {
 	}
 
 	private void loadExtIDs() throws IOException {
-		Set<String> netIPs = readIDs(Config.INSTANCE.getNetflow(), 0);
-		Set<String> servIPs = readIDs(Config.INSTANCE.getService(), 0);
-		Set<String> timeIPs = readIDs(Config.INSTANCE.getTimeSeries(), 0);
-		Set<String> pairServIPs = readIDs(Config.INSTANCE.getPairService(), 1);
+		Set<String> netIPs = readIDs(Config.INSTANCE.getNetflow(), 0, Config.INSTANCE.getCurrentFeaturePath());
+		Set<String> servIPs = readIDs(Config.INSTANCE.getService(), 0, Config.INSTANCE.getFeaturePaths());
+		Set<String> timeIPs = readIDs(Config.INSTANCE.getTimeSeries(), 0, Config.INSTANCE.getFeaturePaths());
+		Set<String> pairServIPs = readIDs(Config.INSTANCE.getPairService(), 1, Config.INSTANCE.getFeaturePaths());
 		Set<String> allIPs = netIPs;
 		allIPs.retainAll(servIPs);
 		allIPs.retainAll(timeIPs);
@@ -198,8 +198,8 @@ public class CydimePreprocessor {
 	}
 
 	private void loadIntIPs() throws IOException {
-		Set<String> netIPs = readIDs(Config.INSTANCE.getNetflow(), 0);
-		Set<String> timeIPs = readIDs(Config.INSTANCE.getTimeSeries(), 0);
+		Set<String> netIPs = readIDs(Config.INSTANCE.getNetflow(), 0, Config.INSTANCE.getCurrentFeaturePath());
+		Set<String> timeIPs = readIDs(Config.INSTANCE.getTimeSeries(), 0, Config.INSTANCE.getFeaturePaths());
 		Set<String> allIPs = netIPs;
 		allIPs.retainAll(timeIPs);
 		
@@ -209,9 +209,9 @@ public class CydimePreprocessor {
 		Log.log(Level.INFO, "Internal IP set = {0}", mIDs.size() );
 	}
 	
-	private static Set<String> readIDs(String file, int ipIndex) throws IOException {
+	private static Set<String> readIDs(String file, int ipIndex, String ... paths) throws IOException {
 		Set<String> ips = CUtil.makeSet();
-		for (String featurePath : Config.INSTANCE.getFeaturePaths()) {
+		for (String featurePath : paths) {
 			BufferedReader in = new BufferedReader(new FileReader(featurePath + file));
 			String line = in.readLine();		
 			while ((line = in.readLine()) != null) {

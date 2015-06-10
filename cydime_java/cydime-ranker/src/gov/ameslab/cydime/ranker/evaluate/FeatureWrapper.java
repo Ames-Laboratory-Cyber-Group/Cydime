@@ -61,6 +61,8 @@ public class FeatureWrapper {
 		for (int i = 0; i <= mLastFeatureIndex; i++) {
 			if (mFeatures.contains(i)) continue;
 			
+//			if (i == 1 || i == 30 || i == 31 || i == 32) continue; //TEST
+			
 			double eval = wrapWithFeature(i);
 			if (eval > bestFeatureEval) {
 				bestFeatureEval = eval;
@@ -142,8 +144,8 @@ public class FeatureWrapper {
 			train.add(inst);
 		}
 		
-		for (String ip : split.getTrainBlack()) {
-//		for (String ip : split.getTrainNonWhite()) {
+//		for (String ip : split.getTrainBlack()) {
+		for (String ip : split.getTrainNonWhite()) {
 			Instance inst = baseNorm.getWekaInstance(ip);
 			inst.setClassValue(LabelSplit.LABEL_NEGATIVE);
 			inst.setDataset(train);

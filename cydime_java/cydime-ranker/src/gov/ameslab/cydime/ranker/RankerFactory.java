@@ -52,9 +52,11 @@ import weka.classifiers.functions.LibSVM;
 import weka.classifiers.functions.Logistic;
 import weka.classifiers.functions.supportVector.PolyKernel;
 import weka.classifiers.functions.supportVector.RBFKernel;
+import weka.classifiers.meta.AdaBoostM1;
 import weka.classifiers.meta.Bagging;
 import weka.classifiers.meta.OneClassClassifier;
 import weka.classifiers.trees.REPTree;
+import weka.classifiers.trees.RandomForest;
 import weka.core.SelectedTag;
 
 /**
@@ -99,12 +101,22 @@ public class RankerFactory {
 		return c;
 	}
 
-	public static AbstractClassifier makeLibLINEAR() {
-		LibLINEAR c = new LibLINEAR();
-		c.setSVMType(new SelectedTag(0, LibLINEAR.TAGS_SVMTYPE));
-		c.setProbabilityEstimates(true);
+	public static AbstractClassifier makeAdaBoostM1() {
+		AdaBoostM1 c = new AdaBoostM1();
 		return c;
 	}
+	
+	public static AbstractClassifier makeRandomForest() {
+		RandomForest c = new RandomForest();
+		return c;
+	}
+	
+//	public static AbstractClassifier makeLibLINEAR() {
+//		LibLINEAR c = new LibLINEAR();
+//		c.setSVMType(new SelectedTag(0, LibLINEAR.TAGS_SVMTYPE));
+//		c.setProbabilityEstimates(true);
+//		return c;
+//	}
 	
 	public static AbstractClassifier makeLibSVM() {
 		LibSVM c = new LibSVM();
@@ -165,13 +177,29 @@ public class RankerFactory {
 		return cs;
 	}
 	
-	public static List<AbstractClassifier> makeLibLINEAR(int n) {
+	public static List<AbstractClassifier> makeAdaBoostM1(int n) {
 		List<AbstractClassifier> cs = CUtil.makeList();
 		for (int i = 0; i < n; i++) {
-			cs.add(makeLibLINEAR());
+			cs.add(makeAdaBoostM1());
 		}
 		return cs;
 	}
+	
+	public static List<AbstractClassifier> makeRandomForest(int n) {
+		List<AbstractClassifier> cs = CUtil.makeList();
+		for (int i = 0; i < n; i++) {
+			cs.add(makeRandomForest());
+		}
+		return cs;
+	}
+	
+//	public static List<AbstractClassifier> makeLibLINEAR(int n) {
+//		List<AbstractClassifier> cs = CUtil.makeList();
+//		for (int i = 0; i < n; i++) {
+//			cs.add(makeLibLINEAR());
+//		}
+//		return cs;
+//	}
 	
 	public static List<AbstractClassifier> makeLibSVM(int n) {
 		List<AbstractClassifier> cs = CUtil.makeList();
