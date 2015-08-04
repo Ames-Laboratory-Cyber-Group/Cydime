@@ -61,6 +61,7 @@ public class LPABipartite {
 	private double mSum;
 	private double[] mIntDegs;
 	private double[] mExtDegs;
+	private String basePath;
 
 	private int[] cIntLabel;
 	private int[] cExtLabel;
@@ -70,19 +71,20 @@ public class LPABipartite {
 	private Histogram<Integer> tScoreForLabel;
 	private FastListSet<Integer> tLabels;
 	private IndexedList<String> indexedGroups;
-	private IndexedList<String> mExtIPList;
+	private IndexedList<Integer> asnList;
 	
-	public LPABipartite(Matrix<Double> matrix, double sum, double[] intDegs, double[] extDegs) {
+	public LPABipartite(Matrix<Double> matrix, double sum, double[] intDegs, double[] extDegs,String basePath) {
 		mMatrix = matrix;
 		mSum = sum;
 		mIntDegs = intDegs;
 		mExtDegs = extDegs;
+		this.basePath = basePath;
 	}
 	
-	public void run(int[] intLabel, int[] extLabel, IndexedList<String> indexedGroups, IndexedList<String> mExtIPList) throws IOException{
+	public void run(int[] intLabel, int[] extLabel, IndexedList<String> indexedGroups, IndexedList<Integer> asnList) throws IOException{
 		Log.log(Level.INFO, "Running LPABipartite...");
 		this.indexedGroups=indexedGroups;
-		this.mExtIPList=mExtIPList;
+		this.asnList=asnList;
 		cIntLabel = intLabel;
 		cExtLabel = extLabel;
 		tScoreForLabel = new Histogram<Integer>();
@@ -121,46 +123,25 @@ public class LPABipartite {
 ///mahee
 	}
 
-	public HashMap<String,String> readExternalIps() throws IOException{
-		System.out.println("Loading the external Ips host names");
-		HashMap<String,String> hostNames = new HashMap<String,String>();
-		String line;
-		BufferedReader br = new BufferedReader(new FileReader(new File("/Users/maheedhar/Documents/Dev/Repository/BiCommunity/ipHostMap.csv")));
-		while ((line = br.readLine()) != null) {
-			String[] edge = line.split(",");
-			if(edge[1].equals("NA")){
-				hostNames.put(edge[0],edge[0]);
-			}else{
-				hostNames.put(edge[0],edge[1]);
-			}
-		}
-		br.close();
-		return hostNames;
-	}
+
 
 	private void outputCommunities(HashMap<Integer,Double> modularityMap) throws IOException{
 		List<Integer> sortedModularityList = getSortedKeysByValue(modularityMap);
 		Collections.reverse(sortedModularityList);
-		String outputPath = "/Users/maheedhar/Documents/Dev/Repository/BiCommunity/";
-		File outputDir = new File(outputPath);
-		outputDir.mkdirs();
-		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(outputPath+"output.bic")));
+		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(basePath+"output.bic")));
 		Iterator<Integer> sortedModularityIterator = sortedModularityList.iterator();
-		HashMap<String,String> externalHostNames = readExternalIps();
+		InputGroup inputGroup = new InputGroup(basePath);
+		HashMap<Integer,String> externalHostNames = inputGroup.getASNNumberToASNNameMap();
 		while(sortedModularityIterator.hasNext()){
 			int key = sortedModularityIterator.next();
 			bw.write("\n##############");
 			bw.write("\nPartition name: " + indexedGroups.get(key));
 			bw.write("\nModularity: " + modularityMap.get(key));
-			bw.write("\nExternal Ips : ");
+			bw.write("\nExternal ASN : ");
 			//this is going to be ugly
 			for (int j = 0; j < cExtLabel.length; j++) {
 				if(cExtLabel[j]==key){
-					if(externalHostNames.get(mExtIPList.get(j))==null){
-						bw.write("\n" + mExtIPList.get(j));
-					}else{
-						bw.write("\n" + externalHostNames.get(mExtIPList.get(j)));
-					}
+					bw.write("\n" + externalHostNames.get(asnList.get(j)));
 				}
 			}
 		}

@@ -1,5 +1,6 @@
 package gov.ameslab.cydime.preprocess.community;
 
+import gov.ameslab.cydime.util.CUtil;
 import gov.ameslab.cydime.util.IndexedList;
 
 import java.io.BufferedReader;
@@ -9,6 +10,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -16,9 +18,18 @@ import java.util.logging.Logger;
  * Created by maheedhar on 7/27/15.
  */
 public class InputGroup {
+
+    private String basePath ;
+    private String partitionPath;
+
+    public InputGroup(String base){
+        basePath = base;
+        partitionPath = basePath + "netreg_nobuilding.csv";
+        basePath = base;
+    }
+
     private static final Logger Log = Logger.getLogger(BiCommunity.class.getName());
-    String basePath = "/Users/maheedhar/Documents/Dev/Repository/BiCommunity/";
-    String partitionPath = basePath + "netreg_nobuilding.csv";
+
     public HashMap<String,Integer> getAllGroupMappings(IndexedList<String> groups) throws IOException{
         Log.log(Level.INFO, "Reading Internal Groups...");
         HashMap<String,Integer> subnets = getPartitions(new File(partitionPath),groups);
@@ -103,4 +114,77 @@ public class InputGroup {
         IndexedList<String> groups= new IndexedList<String>(internalGroupList);
         return groups;
     }
+
+    public HashMap<String,String> readExternalIps() throws IOException{
+        Log.log(Level.INFO, "Loading the external Ips host names");
+        HashMap<String,String> hostNames = new HashMap<String,String>();
+        String line;
+        BufferedReader br = new BufferedReader(new FileReader(new File(basePath+"ipHostMap.csv")));
+        while ((line = br.readLine()) != null) {
+            String[] edge = line.split(",");
+            if(edge[1].equals("NA")){
+                hostNames.put(edge[0],edge[0]);
+            }else{
+                hostNames.put(edge[0], edge[1]);
+            }
+        }
+        br.close();
+        return hostNames;
+    }
+
+    public HashMap<Integer,Integer> readASNMap(IndexedList<String> extIpList,IndexedList<Integer> asnList) throws IOException{
+        HashMap<Integer,Integer> result = new HashMap<Integer,Integer>();
+        String inPath = new String(basePath+"ipASNMap.csv");
+        BufferedReader in = new BufferedReader(new FileReader(inPath));
+        String line;
+        while ((line = in.readLine()) != null) {
+            String[] edge = line.split(",");
+            int index = extIpList.getIndex(edge[0]);
+            if(index != -1){
+                try{
+                    result.put(index,asnList.getIndex(Integer.parseInt(edge[1])));//yuck
+                }catch (NumberFormatException e){
+
+                }
+            }
+        }
+        return result;
+    }
+
+    public HashMap<Integer,String> getASNNumberToASNNameMap() throws IOException{
+        HashMap<Integer,String> result = new HashMap<Integer,String>();
+        String inPath = new String(basePath+"ipASNMap.csv");
+        BufferedReader in = new BufferedReader(new FileReader(inPath));
+        String line;
+        while ((line = in.readLine()) != null) {
+            String[] edge = line.split(",");
+            try{
+                result.put(Integer.parseInt(edge[1]),edge[2]);
+            }catch (NumberFormatException e){
+                //since sometimes the ASN number field is "NA"
+            }
+            catch (ArrayIndexOutOfBoundsException e){
+               //since sometimes the ASN number might not have a name and hence edge[2] causes this exception
+            }
+        }
+        return result;
+    }
+
+    public IndexedList<Integer> getASNList() throws IOException{
+        Set<Integer> asnSet = CUtil.makeSet();
+        String inPath = new String(basePath+"ipASNMap.csv");
+        BufferedReader in = new BufferedReader(new FileReader(inPath));
+        String line;
+        while ((line = in.readLine()) != null) {
+            String[] edge = line.split(",");
+            try {
+                asnSet.add(Integer.parseInt(edge[1]));
+            }catch (NumberFormatException e){
+
+            }
+        }
+        return new IndexedList<Integer>(asnSet);
+    }
+
+
 }

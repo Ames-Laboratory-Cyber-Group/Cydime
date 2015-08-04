@@ -138,7 +138,7 @@ public class Matrix<T> {
 		return cTranspose;
 	}
 	
-	public void updateTranspose() {
+	public void updateTranspose() { // to get the external to internal mappings
 		cTranspose.clear();
 		for (Entry<Integer, Map<Integer, T>> iEntry : mMatrix.entrySet()) {
 			int i = iEntry.getKey();

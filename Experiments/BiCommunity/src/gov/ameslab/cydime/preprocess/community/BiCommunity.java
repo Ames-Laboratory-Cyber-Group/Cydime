@@ -69,10 +69,28 @@ public class BiCommunity {
 	private Histogram<Integer> mAllExtLabels;
 	private double[] mExtFocusScore;
 	private Map<Integer, Double> mExtLabelRatio;
-
+	private String basePath;
+	private IndexedList<Integer> asnList;
 	private double cMatrixSum;
 	private double[] cMatrixIntDegs;
 	private double[] cMatrixExtDegs;
+	HashMap<Integer,Integer> ExtIpToASNMap;
+
+	public String getBasePath() {
+		return basePath;
+	}
+
+	public IndexedList<Integer> getAsnList() {
+		return asnList;
+	}
+
+	public void setAsnList(IndexedList<Integer> asnList) {
+		this.asnList = asnList;
+	}
+
+	public void setBasePath(String basePath) {
+		this.basePath = basePath;
+	}
 
 	public Matrix<Double> getmMatrix() {
 		return mMatrix;
@@ -109,18 +127,20 @@ public class BiCommunity {
 	public static void main(String args[]) throws IOException {
 		Log.log(Level.INFO, "Processing BiCommunity...");
 		BiCommunity biCommunity = new BiCommunity();
+		biCommunity.setBasePath("/Users/maheedhar/Documents/Dev/AmesLab/Code/Experiments/BiCommunity/");
 
-		InputGroup inputGroup = new InputGroup();
+		InputGroup inputGroup = new InputGroup(biCommunity.getBasePath());
+
 		IndexedList<String> indexedGroups = inputGroup.getIndexedGroups();
 		HashMap<String,Integer> mappings = inputGroup.getAllGroupMappings(indexedGroups);
-
+		biCommunity.setAsnList(inputGroup.getASNList());
 		biCommunity.read(mappings);
 		//saveMatrix();
 		biCommunity.normalizeAdjMatrix();
 
 		biCommunity.initLPA(mappings,indexedGroups.size());
-		LPABipartite lpa = new LPABipartite(biCommunity.getmMatrix(), biCommunity.getcMatrixSum(), biCommunity.getcMatrixIntDegs(), biCommunity.getcMatrixExtDegs());
-		lpa.run(biCommunity.getmIntLabel(), biCommunity.getmExtLabel(),indexedGroups,biCommunity.getmExtIPList());
+		LPABipartite lpa = new LPABipartite(biCommunity.getmMatrix(), biCommunity.getcMatrixSum(), biCommunity.getcMatrixIntDegs(), biCommunity.getcMatrixExtDegs(),biCommunity.getBasePath());
+		lpa.run(biCommunity.getmIntLabel(), biCommunity.getmExtLabel(),indexedGroups,biCommunity.getAsnList());
 
 		biCommunity.relabel();
 		//saveBipartiteSummary();
@@ -137,7 +157,7 @@ public class BiCommunity {
 	private void read(HashMap<String, Integer> mappings) throws IOException {
 		Set<String> intSet = CUtil.makeSet();// a hashset is returned, so no duplicates
 		Set<String> extSet = CUtil.makeSet();
-		String inPath = new String("/Users/maheedhar/Documents/Dev/Repository/BiCommunity/pair_services.features");
+		String inPath = new String(basePath+"pair_services.features");
 		BufferedReader in = new BufferedReader(new FileReader(inPath));
 		String line = in.readLine();
 		while ((line = in.readLine()) != null) {
@@ -151,12 +171,14 @@ public class BiCommunity {
 
 		mIntIPList = new IndexedList<String>(intSet);
 		mExtIPList = new IndexedList<String>(extSet);
+		InputGroup inputGroup = new InputGroup(basePath);
+		ExtIpToASNMap = inputGroup.readASNMap(mExtIPList,asnList);
 
 		Log.log(Level.INFO, "External IPs = {0}", mExtIPList.size());
 		Log.log(Level.INFO, "Internal IPs = {0}", mIntIPList.size());
 
-		mMatrix = new Matrix<Double>(mIntIPList.size(), mExtIPList.size(), 0.0);
-		String inPath1 = new String("/Users/maheedhar/Documents/Dev/Repository/BiCommunity/pair_services.features");
+		mMatrix = new Matrix<Double>(mIntIPList.size(), asnList.size(), 0.0);
+		String inPath1 = new String(basePath+"pair_services.features");
 		BufferedReader in1 = new BufferedReader(new FileReader(inPath1));
 		String line1 = in1.readLine();
 		while ((line1 = in1.readLine()) != null) {
@@ -164,9 +186,11 @@ public class BiCommunity {
 			double weight = Double.parseDouble(split[6]);
 			if(mappings.get(split[0])!=null){
 				int intIndex = mIntIPList.getIndex(split[0]);// instead of the Ips, the index of the Ips in the indexedList is used instead.
-				int extIndex = mExtIPList.getIndex(split[1]);
-				Double old = mMatrix.get(intIndex, extIndex);
-				mMatrix.set(intIndex, extIndex, old + weight);
+				Integer asnIndex = ExtIpToASNMap.get(mExtIPList.getIndex(split[1]));
+				if(asnIndex != null){
+					Double old = mMatrix.get(intIndex, asnIndex);
+					mMatrix.set(intIndex, asnIndex, old + weight); //many external Ips can have the same ASN number
+				}
 			}
 		}
 		in1.close();
@@ -213,8 +237,8 @@ public class BiCommunity {
 		}
 
 		//if(c<numOfSubnets){
-		for (int i = 0; i < mExtLabel.length; i++) {
-			mExtLabel[i] = numOfSubnets++;//randomly assign one unique label to each node
+		for(Integer asnNum : asnList.getList()){
+			mExtLabel[asnList.getIndex(asnNum)] = numOfSubnets++;//randomly assign one unique label to each node
 		}
 //		}else{
 //			for (int i = 0; i < mExtLabel.length; i++) {
