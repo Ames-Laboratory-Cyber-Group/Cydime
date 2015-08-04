@@ -129,20 +129,29 @@ public class LPABipartite {
 		List<Integer> sortedModularityList = getSortedKeysByValue(modularityMap);
 		Collections.reverse(sortedModularityList);
 		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(basePath+"output.bic")));
-		Iterator<Integer> sortedModularityIterator = sortedModularityList.iterator();
 		InputGroup inputGroup = new InputGroup(basePath);
 		HashMap<Integer,String> externalHostNames = inputGroup.getASNNumberToASNNameMap();
-		while(sortedModularityIterator.hasNext()){
-			int key = sortedModularityIterator.next();
+		for (int key : sortedModularityList) {
 			bw.write("\n##############");
 			bw.write("\nPartition name: " + indexedGroups.get(key));
 			bw.write("\nModularity: " + modularityMap.get(key));
 			bw.write("\nExternal ASN : ");
 			//this is going to be ugly
+			Set<String> asns = CUtil.makeSet();
 			for (int j = 0; j < cExtLabel.length; j++) {
 				if(cExtLabel[j]==key){
-					bw.write("\n" + externalHostNames.get(asnList.get(j)));
+					if (externalHostNames.get(asnList.get(j)) == null) {
+						System.out.println(key + " " + j);
+					}
+					asns.add(externalHostNames.get(asnList.get(j)));
+					//bw.write("\n" + externalHostNames.get(asnList.get(j)));
 				}
+			}
+
+			List<String> asnList = CUtil.makeList(asns);
+			Collections.sort(asnList);
+			for (String asn : asnList) {
+				bw.write("\n" + asn);
 			}
 		}
 		bw.close();

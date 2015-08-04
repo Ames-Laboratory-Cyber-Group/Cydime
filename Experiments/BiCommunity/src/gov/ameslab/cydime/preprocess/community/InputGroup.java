@@ -3,10 +3,7 @@ package gov.ameslab.cydime.preprocess.community;
 import gov.ameslab.cydime.util.CUtil;
 import gov.ameslab.cydime.util.IndexedList;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -165,6 +162,11 @@ public class InputGroup {
             }
             catch (ArrayIndexOutOfBoundsException e){
                //since sometimes the ASN number might not have a name and hence edge[2] causes this exception
+                try{
+                    result.put(Integer.parseInt(edge[1]),edge[1]);
+                }catch (ArrayIndexOutOfBoundsException ex){
+
+                }
             }
         }
         return result;
@@ -180,6 +182,8 @@ public class InputGroup {
             try {
                 asnSet.add(Integer.parseInt(edge[1]));
             }catch (NumberFormatException e){
+
+            }catch (ArrayIndexOutOfBoundsException e){
 
             }
         }
