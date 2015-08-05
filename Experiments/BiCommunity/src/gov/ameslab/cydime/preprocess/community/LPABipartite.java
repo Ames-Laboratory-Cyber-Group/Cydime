@@ -81,7 +81,7 @@ public class LPABipartite {
 		this.basePath = basePath;
 	}
 	
-	public void run(int[] intLabel, int[] extLabel, IndexedList<String> indexedGroups, IndexedList<Integer> asnList) throws IOException{
+	public void run(int[] intLabel, int[] extLabel, IndexedList<String> indexedGroups, IndexedList<Integer> asnList,String service) throws IOException{
 		Log.log(Level.INFO, "Running LPABipartite...");
 		this.indexedGroups=indexedGroups;
 		this.asnList=asnList;
@@ -113,7 +113,7 @@ public class LPABipartite {
 //
 		double newModularity = getModularity();
 		Log.log(Level.INFO, "Modularity after :"+ newModularity);
-		outputCommunities(getModularityMap());
+		outputCommunities(getModularityMap(),service);
 //			if (newModularity - modularity < MIN_MOD_INCREMENT) {
 //				break;
 //			} else {
@@ -125,10 +125,10 @@ public class LPABipartite {
 
 
 
-	private void outputCommunities(HashMap<Integer,Double> modularityMap) throws IOException{
+	private void outputCommunities(HashMap<Integer,Double> modularityMap,String service) throws IOException{
 		List<Integer> sortedModularityList = getSortedKeysByValue(modularityMap);
 		Collections.reverse(sortedModularityList);
-		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(basePath+"output.bic")));
+		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(basePath+"output_"+service+".bic")));
 		InputGroup inputGroup = new InputGroup(basePath);
 		HashMap<Integer,String> externalHostNames = inputGroup.getASNNumberToASNNameMap();
 		for (int key : sortedModularityList) {

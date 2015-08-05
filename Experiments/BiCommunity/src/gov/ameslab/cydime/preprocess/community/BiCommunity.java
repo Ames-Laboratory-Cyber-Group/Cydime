@@ -39,11 +39,7 @@
 
 package gov.ameslab.cydime.preprocess.community;
 
-import gov.ameslab.cydime.util.CUtil;
-import gov.ameslab.cydime.util.Histogram;
-import gov.ameslab.cydime.util.IndexedList;
-import gov.ameslab.cydime.util.MathUtil;
-import gov.ameslab.cydime.util.StringUtil;
+import gov.ameslab.cydime.util.*;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -51,6 +47,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
+import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -125,36 +122,37 @@ public class BiCommunity {
 	}
 
 	public static void main(String args[]) throws IOException {
-		Log.log(Level.INFO, "Processing BiCommunity...");
 		BiCommunity biCommunity = new BiCommunity();
 		biCommunity.setBasePath("/home/maheedhar/cluster/07/");
-
 		InputGroup inputGroup = new InputGroup(biCommunity.getBasePath());
-
 		IndexedList<String> indexedGroups = inputGroup.getIndexedGroups();
 		HashMap<String,Integer> mappings = inputGroup.getAllGroupMappings(indexedGroups);
 		biCommunity.setAsnList(inputGroup.getASNList());
-		biCommunity.read(mappings);
-		//saveMatrix();
-		biCommunity.normalizeAdjMatrix();
+		for (String service : ServiceParser.SERVICES){
+			Log.log(Level.INFO, "Processing BiCommunity for "+service);
+			biCommunity.read(mappings,service);
+			//saveMatrix();
+			biCommunity.normalizeAdjMatrix();
 
-		biCommunity.initLPA(mappings,indexedGroups.size());
-		LPABipartite lpa = new LPABipartite(biCommunity.getmMatrix(), biCommunity.getcMatrixSum(), biCommunity.getcMatrixIntDegs(), biCommunity.getcMatrixExtDegs(),biCommunity.getBasePath());
-		lpa.run(biCommunity.getmIntLabel(), biCommunity.getmExtLabel(),indexedGroups,biCommunity.getAsnList());
+			biCommunity.initLPA(mappings,indexedGroups.size());
+			LPABipartite lpa = new LPABipartite(biCommunity.getmMatrix(), biCommunity.getcMatrixSum(), biCommunity.getcMatrixIntDegs(), biCommunity.getcMatrixExtDegs(),biCommunity.getBasePath());
+			lpa.run(biCommunity.getmIntLabel(), biCommunity.getmExtLabel(),indexedGroups,biCommunity.getAsnList(),service);
 
-		biCommunity.relabel();
-		//saveBipartiteSummary();
+			biCommunity.relabel();
+			//saveBipartiteSummary();
 
-		//MSGBipartite msg = new MSGBipartite(mMatrix, cMatrixSum);
-		//msg.run(mIntLabel, mExtLabel);
+			//MSGBipartite msg = new MSGBipartite(mMatrix, cMatrixSum);
+			//msg.run(mIntLabel, mExtLabel);
 
-		//relabel();
-		//saveBipartiteSummary();
+			//relabel();
+			//saveBipartiteSummary();
 
-		biCommunity.calcScore();
+			biCommunity.calcScore();
+		}
+
 	}
 
-	private void read(HashMap<String, Integer> mappings) throws IOException {
+	private void read(HashMap<String, Integer> mappings,String service) throws IOException {
 		Set<String> intSet = CUtil.makeSet();// a hashset is returned, so no duplicates
 		Set<String> extSet = CUtil.makeSet();
 		String[] list = {"01","06","08",  "10",  "14" , "16"  ,"20" , "22",  "24" , "28"  ,"30",
@@ -165,10 +163,15 @@ public class BiCommunity {
 			String line = in.readLine();
 			while ((line = in.readLine()) != null) {
 				String[] split = StringUtil.trimmedSplit(line, ",");
-				if(mappings.get(split[0])!=null){
-					intSet.add(split[0]);
+				String src = split[2];
+				String dest = split[3];
+				if (ServiceParser.parse(src, dest).contains(service)) {
+					if(mappings.get(split[0]) != null) {
+						intSet.add(split[0]);
+					}
+					extSet.add(split[1]);//reading the internal and external IPs and loading them
 				}
-				extSet.add(split[1]);//reading the internal and external IPs and loading them
+
 			}
 			in.close();
 		}
@@ -188,14 +191,19 @@ public class BiCommunity {
 			String line1 = in1.readLine();
 			while ((line1 = in1.readLine()) != null) {
 				String[] split = StringUtil.trimmedSplit(line1, ",");
+				String src = split[2];
+				String dest = split[3];
 				double weight = Double.parseDouble(split[6]);
-				if(mappings.get(split[0])!=null){
-					int intIndex = mIntIPList.getIndex(split[0]);// instead of the Ips, the index of the Ips in the indexedList is used instead.
-					Integer asnIndex = ExtIpToASNMap.get(mExtIPList.getIndex(split[1]));
-					if(asnIndex != null){
-						Double old = mMatrix.get(intIndex, asnIndex);
-						mMatrix.set(intIndex, asnIndex, old + weight); //many external Ips can have the same ASN number
-					}
+				if(!mappings.containsKey(split[0])) continue;
+
+				int intIndex = mIntIPList.getIndex(split[0]);// instead of the Ips, the index of the Ips in the indexedList is used instead.
+				Integer asnIndex = ExtIpToASNMap.get(mExtIPList.getIndex(split[1]));
+				if(asnIndex == null) continue;
+
+				if (ServiceParser.parse(src, dest).contains(service)) {
+					mMatrix.set(intIndex, asnIndex, 1.0);
+//					Double old = mMatrix.get(intIndex, asnIndex);
+//					mMatrix.set(intIndex, asnIndex, old + weight); //many external Ips can have the same ASN number
 				}
 			}
 			in1.close();
