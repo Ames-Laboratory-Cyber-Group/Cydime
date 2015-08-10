@@ -81,7 +81,7 @@ public class LPABipartite {
 		this.basePath = basePath;
 	}
 	
-	public void run(int[] intLabel, int[] extLabel, IndexedList<String> indexedGroups, IndexedList<Integer> asnList,String service) throws IOException{
+	public void run(int[] intLabel, int[] extLabel, IndexedList<String> indexedGroups, IndexedList<Integer> asnList,String service,String day) throws IOException{
 		Log.log(Level.INFO, "Running LPABipartite...");
 		this.indexedGroups=indexedGroups;
 		this.asnList=asnList;
@@ -113,7 +113,7 @@ public class LPABipartite {
 //
 		double newModularity = getModularity();
 		Log.log(Level.INFO, "Modularity after :"+ newModularity);
-		outputCommunities(getModularityMap(),service);
+		outputCommunities(getModularityMap(),service,day);
 //			if (newModularity - modularity < MIN_MOD_INCREMENT) {
 //				break;
 //			} else {
@@ -125,33 +125,21 @@ public class LPABipartite {
 
 
 
-	private void outputCommunities(HashMap<Integer,Double> modularityMap,String service) throws IOException{
-		List<Integer> sortedModularityList = getSortedKeysByValue(modularityMap);
+	private void outputCommunities(Histogram<Integer> modularityMap,String service, String day) throws IOException{
+		List<Integer> sortedModularityList = modularityMap.getSortedKeysByValue();
 		Collections.reverse(sortedModularityList);
-		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(basePath+"output_"+service+".bic")));
+		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(basePath+"intermediateOutput_Subnet_"+day+"_"+service+".bic")));
 		InputGroup inputGroup = new InputGroup(basePath);
 		HashMap<Integer,String> externalHostNames = inputGroup.getASNNumberToASNNameMap();
+		bw.write("\nPartition name,Modularity,External ASN(CSV list)");
 		for (int key : sortedModularityList) {
-			bw.write("\n##############");
-			bw.write("\nPartition name: " + indexedGroups.get(key));
-			bw.write("\nModularity: " + modularityMap.get(key));
-			bw.write("\nExternal ASN : ");
+			bw.write("\n"+indexedGroups.get(key)+","+modularityMap.get(key));
 			//this is going to be ugly
 			Set<String> asns = CUtil.makeSet();
 			for (int j = 0; j < cExtLabel.length; j++) {
 				if(cExtLabel[j]==key){
-					if (externalHostNames.get(asnList.get(j)) == null) {
-						System.out.println(key + " " + j);
-					}
-					asns.add(externalHostNames.get(asnList.get(j)));
-					//bw.write("\n" + externalHostNames.get(asnList.get(j)));
+					bw.write(","+asnList.get(j));
 				}
-			}
-
-			List<String> asnList = CUtil.makeList(asns);
-			Collections.sort(asnList);
-			for (String asn : asnList) {
-				bw.write("\n" + asn);
 			}
 		}
 		bw.close();
@@ -210,11 +198,11 @@ public class LPABipartite {
 		return result / mSum;
 	}
 
-	private HashMap<Integer,Double> getModularityMap() {
-		double result = 0.0;
-		HashMap<Integer,Double> modularityMap = new HashMap<Integer,Double>();
+	private Histogram<Integer> getModularityMap() {
+		Histogram<Integer> modularityMap = new Histogram<Integer>();
 
 		for (Entry<Integer, Map<Integer, Double>> iEntry : mMatrix.getMatrix().entrySet()) {
+			double result = 0.0;
 			int i = iEntry.getKey();
 			int iLabel = cIntLabel[i]; //label of the node identified by "i"
 			Map<Integer, Double> jMap = iEntry.getValue();
@@ -226,13 +214,18 @@ public class LPABipartite {
 
 				if (iLabel == jLabel) {
 					result += jMap.get(j);
-					for (int label : cIntDegSumForLabel.keySet()) {
-						result -= cIntDegSumForLabel.get(iLabel) * cExtDegSumForLabel.get(iLabel) / mSum;
-					}
+					//result -= cIntDegSumForLabel.get(iLabel) * cExtDegSumForLabel.get(iLabel) / mSum;
 				}
 			}
-			modularityMap.put(iLabel,result/mSum);
+
+			modularityMap.increment(iLabel, result / mSum);
 		}
+
+		for (int label : cIntDegSumForLabel.keySet()) {
+			modularityMap.increment(label, -cIntDegSumForLabel.get(label) * cExtDegSumForLabel.get(label) / mSum / mSum);
+		}
+
+//		System.out.println(modularityMap.sum() + " " + getModularity());
 
 		return modularityMap;
 	}

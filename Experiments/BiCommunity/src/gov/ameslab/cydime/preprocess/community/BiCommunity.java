@@ -129,53 +129,53 @@ public class BiCommunity {
 		HashMap<String,Integer> mappings = inputGroup.getAllGroupMappings(indexedGroups);
 		biCommunity.setAsnList(inputGroup.getASNList());
 		for (String service : ServiceParser.SERVICES){
-			Log.log(Level.INFO, "Processing BiCommunity for "+service);
-			biCommunity.read(mappings,service);
-			//saveMatrix();
-			biCommunity.normalizeAdjMatrix();
+			String[] list = {"01","06","08",  "10",  "14" , "16"  ,"20" , "22",  "24" , "28"  ,"30",
+					"02" , "07",  "09",  "13",  "15",  "17",  "21",  "23",  "27",  "29",  "31"};
+			for(String day : list) {
+				Log.log(Level.INFO, "Processing BiCommunity for "+service+" for the date 2015/07/"+day);
+				biCommunity.read(mappings, service,day);
+				//saveMatrix();
+				biCommunity.normalizeAdjMatrix();
 
-			biCommunity.initLPA(mappings,indexedGroups.size());
-			LPABipartite lpa = new LPABipartite(biCommunity.getmMatrix(), biCommunity.getcMatrixSum(), biCommunity.getcMatrixIntDegs(), biCommunity.getcMatrixExtDegs(),biCommunity.getBasePath());
-			lpa.run(biCommunity.getmIntLabel(), biCommunity.getmExtLabel(),indexedGroups,biCommunity.getAsnList(),service);
+				biCommunity.initLPA(mappings, indexedGroups.size());
+				LPABipartite lpa = new LPABipartite(biCommunity.getmMatrix(), biCommunity.getcMatrixSum(), biCommunity.getcMatrixIntDegs(), biCommunity.getcMatrixExtDegs(), biCommunity.getBasePath());
+				lpa.run(biCommunity.getmIntLabel(), biCommunity.getmExtLabel(), indexedGroups, biCommunity.getAsnList(), service,day);
 
-			biCommunity.relabel();
-			//saveBipartiteSummary();
+				biCommunity.relabel();
+				//saveBipartiteSummary();
 
-			//MSGBipartite msg = new MSGBipartite(mMatrix, cMatrixSum);
-			//msg.run(mIntLabel, mExtLabel);
+				//MSGBipartite msg = new MSGBipartite(mMatrix, cMatrixSum);
+				//msg.run(mIntLabel, mExtLabel);
 
-			//relabel();
-			//saveBipartiteSummary();
+				//relabel();
+				//saveBipartiteSummary();
 
-			biCommunity.calcScore();
+				biCommunity.calcScore();
+			}
 		}
 
 	}
 
-	private void read(HashMap<String, Integer> mappings,String service) throws IOException {
+	private void read(HashMap<String, Integer> mappings, String service, String day) throws IOException {
 		Set<String> intSet = CUtil.makeSet();// a hashset is returned, so no duplicates
 		Set<String> extSet = CUtil.makeSet();
-		String[] list = {"01","06","08",  "10",  "14" , "16"  ,"20" , "22",  "24" , "28"  ,"30",
-				"02" , "07",  "09",  "13",  "15",  "17",  "21",  "23",  "27",  "29",  "31"};
-		for(String day : list){
-			String inPath = new String(basePath+day+"/features/ip/pair_services.features");
-			BufferedReader in = new BufferedReader(new FileReader(inPath));
-			String line = in.readLine();
-			while ((line = in.readLine()) != null) {
-				String[] split = StringUtil.trimmedSplit(line, ",");
-				String src = split[2];
-				String dest = split[3];
-				if (ServiceParser.parse(src, dest).contains(service)) {
-					if(mappings.get(split[0]) != null) {
-						intSet.add(split[0]);
-					}
-					extSet.add(split[1]);//reading the internal and external IPs and loading them
+
+		String inPath = new String(basePath+day+"/features/ip/pair_services.features");
+		BufferedReader in = new BufferedReader(new FileReader(inPath));
+		String line = in.readLine();
+		while ((line = in.readLine()) != null) {
+			String[] split = StringUtil.trimmedSplit(line, ",");
+			String src = split[2];
+			String dest = split[3];
+			if (ServiceParser.parse(src, dest).contains(service)) {
+				if(mappings.get(split[0]) != null) {
+					intSet.add(split[0]);
 				}
-
+				extSet.add(split[1]);//reading the internal and external IPs and loading them
 			}
-			in.close();
-		}
 
+		}
+		in.close();
 
 		mIntIPList = new IndexedList<String>(intSet);
 		mExtIPList = new IndexedList<String>(extSet);
@@ -185,29 +185,27 @@ public class BiCommunity {
 		Log.log(Level.INFO, "External IPs = {0}", mExtIPList.size());
 		Log.log(Level.INFO, "Internal IPs = {0}", mIntIPList.size());
 		mMatrix = new Matrix<Double>(mIntIPList.size(), asnList.size(), 0.0);
-		for(String day: list){
-			String inPath1 = new String(basePath+day+"/features/ip/pair_services.features");
-			BufferedReader in1 = new BufferedReader(new FileReader(inPath1));
-			String line1 = in1.readLine();
-			while ((line1 = in1.readLine()) != null) {
-				String[] split = StringUtil.trimmedSplit(line1, ",");
-				String src = split[2];
-				String dest = split[3];
-				double weight = Double.parseDouble(split[6]);
-				if(!mappings.containsKey(split[0])) continue;
+		String inPath1 = new String(basePath+day+"/features/ip/pair_services.features");
+		BufferedReader in1 = new BufferedReader(new FileReader(inPath1));
+		String line1 = in1.readLine();
+		while ((line1 = in1.readLine()) != null) {
+			String[] split = StringUtil.trimmedSplit(line1, ",");
+			String src = split[2];
+			String dest = split[3];
+			double weight = Double.parseDouble(split[6]);
+			if(!mappings.containsKey(split[0])) continue;
 
-				int intIndex = mIntIPList.getIndex(split[0]);// instead of the Ips, the index of the Ips in the indexedList is used instead.
-				Integer asnIndex = ExtIpToASNMap.get(mExtIPList.getIndex(split[1]));
-				if(asnIndex == null) continue;
+			int intIndex = mIntIPList.getIndex(split[0]);// instead of the Ips, the index of the Ips in the indexedList is used instead.
+			Integer asnIndex = ExtIpToASNMap.get(mExtIPList.getIndex(split[1]));
+			if(asnIndex == null) continue;
 
-				if (ServiceParser.parse(src, dest).contains(service)) {
-					mMatrix.set(intIndex, asnIndex, 1.0);
+			if (ServiceParser.parse(src, dest).contains(service)) {
+				mMatrix.set(intIndex, asnIndex, 1.0);
 //					Double old = mMatrix.get(intIndex, asnIndex);
 //					mMatrix.set(intIndex, asnIndex, old + weight); //many external Ips can have the same ASN number
-				}
 			}
-			in1.close();
 		}
+		in1.close();
 	}
 
 //	private void saveMatrix() throws IOException {
@@ -296,7 +294,7 @@ public class BiCommunity {
 		}
 	}
 
-	private void calcScore() {
+	private void  calcScore() {
 		mExtFocusScore = new double[mExtLabel.length];
 
 		mExtLabelRatio = CUtil.makeMap();
