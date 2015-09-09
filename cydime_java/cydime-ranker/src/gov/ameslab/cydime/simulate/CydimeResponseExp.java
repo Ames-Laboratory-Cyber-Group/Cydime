@@ -72,6 +72,8 @@ public class CydimeResponseExp {
 	
 	private String mAlertFile;
 	private String mAlertName;
+	private boolean mDoWhitelist;
+	
 	private Map<String, Double> mIPScore;
 	private AlertStream mAlerts;
 	private ComplaintFirstBuffer mBuffer;
@@ -79,8 +81,9 @@ public class CydimeResponseExp {
 	private Set<String> mTrueWhite;
 
 	
+	
 	public static void main(String[] args) throws Exception {
-		if (args.length != 2) {
+		if (args.length < 2 || args.length > 3) {
 			printUsage();
 			return;
 		}
@@ -89,8 +92,10 @@ public class CydimeResponseExp {
 	}
 
 	private static void printUsage() {
-		System.out.println("[java] CydimeResponseExp FEATURE_DIR ALERT_FILE");
+		System.out.println("[java] CydimeResponseExp FEATURE_DIR ALERT_FILE [-W]");
 		System.out.println("    FEATURE_DIR: date path specifying feature files");
+		System.out.println("    ALERT_FILE: path specifying sorted alert CSV file");
+		System.out.println("    -W: Optional, print a list of alerted IPs that are part of whitelist");
 	}
 
 	public CydimeResponseExp(String[] args) {
@@ -98,6 +103,9 @@ public class CydimeResponseExp {
 		Config.INSTANCE.setFeatureSet(Config.FEATURE_IP_DIR);
 		mAlertFile = args[1];
 		mAlertName = mAlertFile.substring(0, mAlertFile.indexOf("."));
+		if (args.length == 3 && args[2].equalsIgnoreCase("-W")) {
+			mDoWhitelist = true;
+		}
 	}
 
 	private void run() throws Exception {
@@ -110,10 +118,19 @@ public class CydimeResponseExp {
 		
 		Log.log(Level.INFO, "TrueWhite = {0}", mTrueWhite.size());
 		
-//		List<List<String>> list = whiteDB.getList(CUtil.makeList(mAlerts.getIPs()));
-//		for (List<String> l : list) {
-//			System.out.println(l);
-//		}
+		if (mDoWhitelist) {
+			Log.log(Level.INFO, "Printing alert whitelist...");
+			
+			BufferedWriter out = new BufferedWriter(new FileWriter("alert_white.txt"));
+			List<List<String>> list = whiteDB.getList(CUtil.makeList(mAlerts.getIPs()));
+			for (List<String> l : list) {
+				out.write(l.toString());
+				out.newLine();
+			}
+			out.close();
+			
+			return;
+		}
 		
 		SimulationResult[] results = new SimulationResult[BUFFER_PROTOTYPE.length];
 		for (int i = 0; i < results.length; i++) {

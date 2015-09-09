@@ -11,22 +11,29 @@ public class Snort {
 		
 		String line;
 		while ((line = in.readLine()) != null) {
+			StringBuilder buf = new StringBuilder();
 			String[] split = line.split(" ");
 			
-			System.out.print(split[0].substring(6, 14));
-			System.out.print(",");
+			buf.append(split[0].substring(6, 14))
+				.append(",");
 			
 			int p = line.indexOf("Priority: ");
-			System.out.print(line.charAt(p + "Priority: ".length()));
-			System.out.print(",");
+			buf.append(line.charAt(p + "Priority: ".length()))
+				.append(",");
 			
 			String src = getIP(split[split.length - 3]);
 			String tar = getIP(split[split.length - 1]);
+			String ip;
 			if (src.startsWith("147.155.")) {
-				System.out.println(tar);
+				ip = tar;
 			} else {
-				System.out.println(src);
+				ip = src;
 			}
+			
+			if (ip.indexOf(".") == -1) continue;
+			
+			buf.append(ip);
+			System.out.println(buf);
 		}
 		in.close();
 	}
