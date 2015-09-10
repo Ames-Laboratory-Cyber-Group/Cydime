@@ -279,7 +279,7 @@ public class Config {
 	public String getBasePath() {	return getCurrentModelPath() + "base";	}
 	public String getBaseNormPath() {	return getCurrentModelPath() + "base.norm";	}
 	public String getBaseScorePath() {	return getCurrentModelPath() + "base_score";	}
-	public String getStackPath() {	return getCurrentModelPath() + "stack";	}
+	public String getModelPath() {	return getCurrentModelPath() + "model";	}
 	public String getRankScorePath() {	return getCurrentModelPath() + "rank_score";	}
 	
 	//getReportPath

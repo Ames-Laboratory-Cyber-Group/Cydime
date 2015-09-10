@@ -82,6 +82,12 @@ public class FileUtil {
 		}
 		out.close();
 	}
+	
+	public static void writeFile(String file, String data) throws IOException {
+		BufferedWriter out = new BufferedWriter(new FileWriter(file));
+		out.write(data);
+		out.close();
+	}
 
 	public static Map<String, String> readCSV(String file, boolean toLowerCase) throws IOException {
 		return readCSV(file, 1, toLowerCase);

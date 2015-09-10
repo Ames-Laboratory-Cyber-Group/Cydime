@@ -43,6 +43,7 @@ import gov.ameslab.cydime.model.InstanceDatabase;
 import gov.ameslab.cydime.model.ListDatabase;
 import gov.ameslab.cydime.util.CUtil;
 import gov.ameslab.cydime.util.Config;
+import gov.ameslab.cydime.util.FileUtil;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -55,6 +56,7 @@ import java.util.logging.Logger;
 import weka.classifiers.AbstractClassifier;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.SerializationHelper;
 
 /**
  * Cydime Predictor experimenter using a set of representative predictors.
@@ -124,6 +126,9 @@ public class CydimeRanker {
 		Instances wekaTrain = baseNorm.getWekaTrain();
 		AbstractClassifier c = RankerFactory.makeAdaBoostM1();
 		c.buildClassifier(wekaTrain);
+		
+		FileUtil.writeFile(Config.INSTANCE.getModelPath() + runID + ".txt", c.toString());
+		SerializationHelper.write(Config.INSTANCE.getModelPath() + runID + ".model", c);
 		
 		Map<String, Double> pred = CUtil.makeMap();
 		for (String ip : split.getAll()) {
