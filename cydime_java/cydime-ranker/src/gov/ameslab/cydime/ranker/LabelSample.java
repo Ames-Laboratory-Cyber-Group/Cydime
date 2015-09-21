@@ -1,6 +1,6 @@
 package gov.ameslab.cydime.ranker;
 
-import gov.ameslab.util.CUtil;
+import gov.ameslab.cydime.util.CUtil;
 
 import java.util.List;
 import java.util.Random;

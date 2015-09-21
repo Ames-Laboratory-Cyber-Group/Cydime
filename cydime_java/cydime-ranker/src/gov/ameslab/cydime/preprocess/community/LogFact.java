@@ -1,6 +1,7 @@
 package gov.ameslab.cydime.preprocess.community;
 
-import gov.ameslab.util.CUtil;
+
+import gov.ameslab.cydime.util.CUtil;
 
 import java.util.List;
 

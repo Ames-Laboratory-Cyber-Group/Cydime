@@ -5,9 +5,9 @@ import gov.ameslab.cydime.model.InstanceDatabase;
 import gov.ameslab.cydime.preprocess.FeatureSet;
 import gov.ameslab.cydime.preprocess.WekaPreprocess;
 import gov.ameslab.cydime.util.ARFFWriter;
+import gov.ameslab.cydime.util.CUtil;
 import gov.ameslab.cydime.util.Config;
 import gov.ameslab.cydime.util.FileUtil;
-import gov.ameslab.util.CUtil;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
