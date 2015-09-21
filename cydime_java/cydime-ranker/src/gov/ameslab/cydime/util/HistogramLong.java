@@ -91,6 +91,20 @@ public class HistogramLong<T> {
 		mSum += o.mSum;
 	}
 	
+	public T getMaxKeyByValue() {
+		T maxKey = null;
+		long max = 0L;
+		for (Entry<T, Long> entry : mHistogram.entrySet()) {
+			long count = entry.getValue();
+			if (count > max) {
+				max = count;
+				maxKey = entry.getKey();
+			}
+		}
+
+		return maxKey;
+	}
+	
 	public void clear() {
 		mHistogram.clear();
 		mSum = 0;

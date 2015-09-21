@@ -45,7 +45,7 @@ public class FeatureWrapper {
 
 	public boolean findNext() throws Exception {
 		if (cBaseNorm == null) {
-			cBaseNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
+			cBaseNorm = InstanceDatabase.load(Config.INSTANCE.getAggregatedNormPath());
 			mTrains = new Instances[mSplits.length];
 			mTests = new Instances[mSplits.length];
 			

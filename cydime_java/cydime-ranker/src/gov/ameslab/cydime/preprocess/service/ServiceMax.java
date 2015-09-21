@@ -88,29 +88,28 @@ public class ServiceMax extends FeatureSet {
 		Log.log(Level.INFO, "Processing services (Phase 1)...");
 
 		Map<String, Histogram<String>> idServices = CUtil.makeMap();
-		for (String inPath : mFeaturePaths) {
-			BufferedReader in = new BufferedReader(new FileReader(inPath));
-			String line = in.readLine();
-			while ((line = in.readLine()) != null) {
-				String[] split = StringUtil.trimmedSplit(line, ",");
-				String id = split[0];
-	
-				Histogram<String> services = idServices.get(id);
-				if (services == null) {
-					services = new Histogram<String>();
-					idServices.put(id, services);
-				}
-				
-				//1.0.173.79,udp,udp/domain,2,2,435
-				String src = split[1];
-				String dest = split[2];
-				long value = Long.parseLong(split[5]);
-				for (String serv : ServiceParser.parse(src, dest)) {
-					services.increment(serv, value);
-				}
+		
+		BufferedReader in = new BufferedReader(new FileReader(mCurrentInPath));
+		String line = in.readLine();
+		while ((line = in.readLine()) != null) {
+			String[] split = StringUtil.trimmedSplit(line, ",");
+			String id = split[0];
+
+			Histogram<String> services = idServices.get(id);
+			if (services == null) {
+				services = new Histogram<String>();
+				idServices.put(id, services);
 			}
-			in.close();
+			
+			//1.0.173.79,udp,udp/domain,2,2,435
+			String src = split[1];
+			String dest = split[2];
+			long value = Long.parseLong(split[5]);
+			for (String serv : ServiceParser.parse(src, dest)) {
+				services.increment(serv, value);
+			}
 		}
+		in.close();
 		
 		BufferedWriter out = new BufferedWriter(new FileWriter(mCurrentOutPath + FLATTEN));
 		for (Entry<String, Histogram<String>> entry : idServices.entrySet()) {

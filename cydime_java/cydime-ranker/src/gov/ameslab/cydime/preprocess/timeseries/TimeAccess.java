@@ -48,7 +48,6 @@ import gov.ameslab.cydime.util.ARFFWriter;
 import gov.ameslab.cydime.util.CUtil;
 import gov.ameslab.cydime.util.FileUtil;
 import gov.ameslab.cydime.util.Histogram;
-import gov.ameslab.cydime.util.MapSet;
 import gov.ameslab.cydime.util.StringUtil;
 
 import java.io.BufferedReader;
@@ -59,6 +58,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -85,11 +85,6 @@ public class TimeAccess extends FeatureSet {
 		super(ids, inPath, outPath);
 	}
 
-	private int getDayOfYear(Date date) {
-		mCal.setTime(date);
-		return mCal.get(Calendar.DAY_OF_YEAR);
-	}
-	
 	private int getHourOfDay(Date date) {
 		mCal.setTime(date);
 		return mCal.get(Calendar.HOUR_OF_DAY);
@@ -99,51 +94,52 @@ public class TimeAccess extends FeatureSet {
 		Log.log(Level.INFO, "Processing time access...");
 		
 		Set<String> ids = CUtil.makeSet();
-		MapSet<Integer, String> daySet = new MapSet<Integer, String>();
+		Map<String, Integer> idMinHour = CUtil.makeMap();
+		Map<String, Integer> idMaxHour = CUtil.makeMap();
 		Histogram<String> onWorkHours = new Histogram<String>();
 		Histogram<String> offWorkHours = new Histogram<String>();
 		
-		for (String inPath : mFeaturePaths) {
-			BufferedReader in = new BufferedReader(new FileReader(inPath));
-			String line = in.readLine();
-			while ((line = in.readLine()) != null) {
-				String[] split = StringUtil.trimmedSplit(line, ",");
-				String id = split[0];
-				ids.add(id);
-				long epoch = Long.parseLong(split[1]) * 1000;
-				Date date = new Date(epoch);
-				int dayOfYear = getDayOfYear(date);
-				daySet.add(dayOfYear, id);
-				int hourOfDay = getHourOfDay(date);
-				if (hourOfDay >= WORK_BEGIN_HOUR && hourOfDay <= WORK_END_HOUR) {
-					onWorkHours.increment(id);
-				} else {
-					offWorkHours.increment(id);
+		BufferedReader in = new BufferedReader(new FileReader(mCurrentInPath));
+		String line = in.readLine();
+		while ((line = in.readLine()) != null) {
+			String[] split = StringUtil.trimmedSplit(line, ",");
+			String id = split[0];
+			ids.add(id);
+			long epoch = Long.parseLong(split[1]) * 1000;
+			Date date = new Date(epoch);
+			int hourOfDay = getHourOfDay(date);
+			if (idMinHour.containsKey(id)) {
+				if (hourOfDay < idMinHour.get(id)) {
+					idMinHour.put(id, hourOfDay);
+				} else if (hourOfDay > idMaxHour.get(id)) {
+					idMaxHour.put(id, hourOfDay);
 				}
+			} else {
+				idMinHour.put(id, hourOfDay);
+				idMaxHour.put(id, hourOfDay);
 			}
-			in.close();
+			
+			if (hourOfDay >= WORK_BEGIN_HOUR && hourOfDay <= WORK_END_HOUR) {
+				onWorkHours.increment(id);
+			} else {
+				offWorkHours.increment(id);
+			}
 		}
+		in.close();
 		
 		ARFFWriter out = new ARFFWriter(mCurrentOutPath + WekaPreprocess.ALL_SUFFIX, "timeaccess", ARFFWriter.CLASS_BINARY,
 				"access_hours numeric",
-				"access_days numeric",
+				"access_hours_span numeric",
 				"workhour_perc numeric"
 				); 
 		
-		Set<Integer> days = daySet.keySet();
 		for (String id : mIDs) {
-			int accessDays = 0;
-			for (int day : days) {
-				if (daySet.contains(day, id)) {
-					accessDays++;
-				}
-			}
-			
 			int accessHours = (int) (onWorkHours.get(id) + offWorkHours.get(id));
+			int span = idMaxHour.get(id) - idMinHour.get(id) + 1;
 			double workhour_perc = onWorkHours.get(id) / accessHours;
 			
 			out.writeValues(String.valueOf(accessHours),
-					String.valueOf(accessDays),
+					String.valueOf(span),
 					FORMAT.format(workhour_perc),
 					"?");
 		}

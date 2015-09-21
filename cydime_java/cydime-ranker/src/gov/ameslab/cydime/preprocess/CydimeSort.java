@@ -82,8 +82,8 @@ public class CydimeSort {
 	}
 	
 	private void run() throws IOException {
-		for (String featureSet : new String[] {Config.FEATURE_IP_DIR, Config.FEATURE_ASN_DIR, Config.FEATURE_INT_DIR}) {
-			Config.INSTANCE.setFeatureSet(featureSet);
+		for (String featureSet : new String[] {Config.IP_DIR, Config.ASN_DIR, Config.INT_DIR}) {
+			Config.INSTANCE.setFeatureDir(featureSet);
 			sortFile(Config.INSTANCE.getCurrentFeaturePath() + Config.INSTANCE.getTimeSeries());
 			sortFile(Config.INSTANCE.getCurrentFeaturePath() + Config.INSTANCE.getService());
 		}

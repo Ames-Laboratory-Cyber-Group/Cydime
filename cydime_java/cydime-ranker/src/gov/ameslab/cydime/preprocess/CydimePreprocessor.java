@@ -41,14 +41,10 @@ package gov.ameslab.cydime.preprocess;
 
 import gov.ameslab.cydime.model.DomainDatabase;
 import gov.ameslab.cydime.model.InstanceDatabase;
-import gov.ameslab.cydime.preprocess.community.BiGraph;
-import gov.ameslab.cydime.preprocess.dailyprofile.DailyProfile;
-import gov.ameslab.cydime.preprocess.dailyprofile.DailyProfile.Normalizer;
 import gov.ameslab.cydime.preprocess.lexical.Lexical;
 import gov.ameslab.cydime.preprocess.netflow.Netflow;
 import gov.ameslab.cydime.preprocess.service.ServiceMax;
 import gov.ameslab.cydime.preprocess.timeseries.TimeAccess;
-import gov.ameslab.cydime.preprocess.timeseries.TimeSeries;
 import gov.ameslab.cydime.util.CUtil;
 import gov.ameslab.cydime.util.Config;
 import gov.ameslab.cydime.util.FileUtil;
@@ -102,24 +98,21 @@ public class CydimePreprocessor {
 			e.printStackTrace();
 		}
 		
-		try {
-			runInt();
-		} catch (IOException e) {
-			Log.log(Level.SEVERE, e.toString());
-			e.printStackTrace();
-		}
+//		try {
+//			runInt();
+//		} catch (IOException e) {
+//			Log.log(Level.SEVERE, e.toString());
+//			e.printStackTrace();
+//		}
 	}
 	
 	private void runExtIP() throws IOException {
-		Config.INSTANCE.setFeatureSet(Config.FEATURE_IP_DIR);
+		Config.INSTANCE.setFeatureDir(Config.IP_DIR);
 		loadExtIDs();
 		
 		InstanceDatabase service = new ServiceMax(mIDs, Config.INSTANCE.getService(), Config.INSTANCE.getService()).run();
 		InstanceDatabase netflow = new Netflow(mIDs, Config.INSTANCE.getNetflow(), Config.INSTANCE.getNetflow()).run();
-		InstanceDatabase ts = new TimeSeries(mIDs, Config.INSTANCE.getTimeSeries(), Config.INSTANCE.getTimeSeries()).run();
 		InstanceDatabase ta = new TimeAccess(mIDs, Config.INSTANCE.getTimeSeries(), Config.INSTANCE.getTimeAccess()).run();
-		InstanceDatabase dpService = new DailyProfile(mIDs, Config.INSTANCE.getDailyProfile(), Config.INSTANCE.getDailyProfile()).run(Normalizer.SERVICE_SUM);
-		InstanceDatabase dpTime = new DailyProfile(mIDs, Config.INSTANCE.getDailyProfile(), Config.INSTANCE.getDailyProfile()).run(Normalizer.TIME_SUM);
 		
 		mDomainDB.loadTree();
 		InstanceDatabase lexical = new Lexical(mIDs, Config.INSTANCE.getLexical(), Config.INSTANCE.getLexical(), mDomainDB).run();
@@ -128,44 +121,33 @@ public class CydimePreprocessor {
 		InstanceDatabase base = InstanceDatabase.mergeFeatures(Config.INSTANCE.getBasePath(),
 				service,
 				netflow,
-				ts,
 				ta,
-				dpService,
-				dpTime,
 				lexical
 				);		
 		service = null;
 		netflow = null;
-		ts = null;
 		ta = null;
-		dpService = null;
-		dpTime = null;
 		lexical = null;
 		
 		base.saveIPs();
 		base.write();
 		base.writeReport();
 		
-		FileUtil.copy(base.getIDPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.ID_SUFFIX);
-		FileUtil.copy(base.getARFFPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.ALL_SUFFIX);
-		FileUtil.copy(base.getReportARFFPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.REPORT_SUFFIX);
-		InstanceDatabase baseNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
-		baseNorm.normalize();
-		baseNorm.writeReport();
-		
+		new FeatureCombiner().run();
+
 		//for Explorer
-		new BiGraph(mIDs, Config.INSTANCE.getPairService(), Config.INSTANCE.getPairService()).run();
+//		new BiGraph(mIDs, Config.INSTANCE.getPairService(), Config.INSTANCE.getPairService()).run();
 	}
 
 	private void loadExtIDs() throws IOException {
 		Set<String> netIPs = readIDs(Config.INSTANCE.getNetflow(), 0, Config.INSTANCE.getCurrentFeaturePath());
-		Set<String> servIPs = readIDs(Config.INSTANCE.getService(), 0, Config.INSTANCE.getFeaturePaths());
-		Set<String> timeIPs = readIDs(Config.INSTANCE.getTimeSeries(), 0, Config.INSTANCE.getFeaturePaths());
-		Set<String> pairServIPs = readIDs(Config.INSTANCE.getPairService(), 1, Config.INSTANCE.getFeaturePaths());
+		Set<String> servIPs = readIDs(Config.INSTANCE.getService(), 0, Config.INSTANCE.getCurrentFeaturePath());
+		Set<String> timeIPs = readIDs(Config.INSTANCE.getTimeSeries(), 0, Config.INSTANCE.getCurrentFeaturePath());
+//		Set<String> pairServIPs = readIDs(Config.INSTANCE.getPairService(), 1, Config.INSTANCE.getCurrentFeaturePath());
 		Set<String> allIPs = netIPs;
 		allIPs.retainAll(servIPs);
 		allIPs.retainAll(timeIPs);
-		allIPs.retainAll(pairServIPs);
+//		allIPs.retainAll(pairServIPs);
 		
 		mIDs = CUtil.makeList(allIPs);
 		Collections.sort(mIDs);
@@ -174,32 +156,30 @@ public class CydimePreprocessor {
 	}
 
 	private void runInt() throws IOException {
-		Config.INSTANCE.setFeatureSet(Config.FEATURE_INT_DIR);
+		Config.INSTANCE.setFeatureDir(Config.INT_DIR);
 		loadIntIPs();
 		
 		InstanceDatabase netflow = new Netflow(mIDs, Config.INSTANCE.getNetflow(), Config.INSTANCE.getNetflow()).run();
-		InstanceDatabase ts = new TimeSeries(mIDs, Config.INSTANCE.getTimeSeries(), Config.INSTANCE.getTimeSeries()).run();
 		InstanceDatabase ta = new TimeAccess(mIDs, Config.INSTANCE.getTimeSeries(), Config.INSTANCE.getTimeAccess()).run();
 		
 		InstanceDatabase baseInt = InstanceDatabase.mergeFeatures(Config.INSTANCE.getBasePath(),
 				netflow,
-				ts,
 				ta);
 
 		baseInt.saveIPs();
 		baseInt.writeReport();
 		
-		FileUtil.copy(baseInt.getIDPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.ID_SUFFIX);
-		FileUtil.copy(baseInt.getARFFPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.ALL_SUFFIX);
-		FileUtil.copy(baseInt.getReportARFFPath(), Config.INSTANCE.getBaseNormPath() + WekaPreprocess.REPORT_SUFFIX);
-		InstanceDatabase baseIntNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
+		FileUtil.copy(baseInt.getIDPath(), Config.INSTANCE.getAggregatedNormPath() + WekaPreprocess.ID_SUFFIX);
+		FileUtil.copy(baseInt.getARFFPath(), Config.INSTANCE.getAggregatedNormPath() + WekaPreprocess.ALL_SUFFIX);
+		FileUtil.copy(baseInt.getReportARFFPath(), Config.INSTANCE.getAggregatedNormPath() + WekaPreprocess.REPORT_SUFFIX);
+		InstanceDatabase baseIntNorm = InstanceDatabase.load(Config.INSTANCE.getAggregatedNormPath());
 		baseIntNorm.normalize();
 		baseIntNorm.writeReport();
 	}
 
 	private void loadIntIPs() throws IOException {
 		Set<String> netIPs = readIDs(Config.INSTANCE.getNetflow(), 0, Config.INSTANCE.getCurrentFeaturePath());
-		Set<String> timeIPs = readIDs(Config.INSTANCE.getTimeSeries(), 0, Config.INSTANCE.getFeaturePaths());
+		Set<String> timeIPs = readIDs(Config.INSTANCE.getTimeSeries(), 0, Config.INSTANCE.getCurrentFeaturePath());
 		Set<String> allIPs = netIPs;
 		allIPs.retainAll(timeIPs);
 		

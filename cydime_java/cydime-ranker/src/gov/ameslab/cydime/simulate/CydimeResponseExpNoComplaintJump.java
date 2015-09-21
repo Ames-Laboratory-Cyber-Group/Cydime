@@ -95,7 +95,7 @@ public class CydimeResponseExpNoComplaintJump {
 
 	public CydimeResponseExpNoComplaintJump(String[] args) {
 		Config.INSTANCE.setParam(args[0]);
-		Config.INSTANCE.setFeatureSet(Config.FEATURE_IP_DIR);
+		Config.INSTANCE.setFeatureDir(Config.IP_DIR);
 		mAlertFile = args[1];
 		mAlertName = mAlertFile.substring(0, mAlertFile.indexOf("."));
 	}

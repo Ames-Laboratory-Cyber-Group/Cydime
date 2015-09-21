@@ -9,9 +9,11 @@ public class FeatureProjector extends AbstractClassifier {
 	private static final long serialVersionUID = -3922688336586778901L;
 
 	private int mIndex;
+	private boolean mDoInvert;
 
-	public FeatureProjector(int index) {
+	public FeatureProjector(int index, boolean doInvert) {
 		mIndex = index;
+		mDoInvert = doInvert;
 	}
 
 	@Override
@@ -24,13 +26,27 @@ public class FeatureProjector extends AbstractClassifier {
 		if (Double.isNaN(result)) {
 			result = 0.0;
 		}
-		return result;
+		
+		if (mDoInvert) {
+			return 1.0 - result;
+		} else {
+			return result;
+		}
 	}
 	
 	@Override
 	public double[] distributionForInstance(Instance instance) throws Exception {
 		double p = classifyInstance(instance);
 		return new double[] {1.0 - p, p};
+	}
+
+	@Override
+	public String toString() {
+		if (mDoInvert) {
+			return mIndex + "-inverted";
+		} else {
+			return String.valueOf(mIndex);
+		}
 	}
 	
 }

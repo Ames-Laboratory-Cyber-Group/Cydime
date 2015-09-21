@@ -145,12 +145,12 @@ public class StatData {
 		mIntIPs = intIPs;
 		mIntIPSet = CUtil.makeSet(mIntIPs);
 		
-		Config.INSTANCE.setFeatureSet(Config.FEATURE_IP_DIR);
+		Config.INSTANCE.setFeatureDir(Config.IP_DIR);
         loadExtTable();
         loadExtTimeseries();
         loadGraph();
         
-        Config.INSTANCE.setFeatureSet(Config.FEATURE_INT_DIR);
+        Config.INSTANCE.setFeatureDir(Config.INT_DIR);
         loadIntTable();
         loadIntTimeseries();        
     }
@@ -164,7 +164,7 @@ public class StatData {
 //		ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,avg_sim,var_sim,max_sim,class
         in.add(Config.INSTANCE.getBasePath() + WekaPreprocess.CSV_REPORT_SUFFIX);
 //      ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,avg_sim,var_sim,max_sim,class
-        in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_SUFFIX);
+        in.add(Config.INSTANCE.getAggregatedNormPath() + WekaPreprocess.CSV_SUFFIX);
 //      ID,score
         in.add(Config.INSTANCE.getFinalResultPath());
         int i = 0;
@@ -222,7 +222,7 @@ public class StatData {
         
         in.add(Config.INSTANCE.getBasePath() + WekaPreprocess.CSV_REPORT_SUFFIX);
         
-        in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_REPORT_SUFFIX);
+        in.add(Config.INSTANCE.getAggregatedNormPath() + WekaPreprocess.CSV_REPORT_SUFFIX);
         int i = 0;
         while (in.readLine()) {
             String ip = in.get("ID");

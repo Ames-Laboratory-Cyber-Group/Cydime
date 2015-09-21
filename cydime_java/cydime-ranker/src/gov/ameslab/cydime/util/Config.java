@@ -39,7 +39,7 @@
 
 package gov.ameslab.cydime.util;
 
-import gov.ameslab.cydime.preprocess.timeseries.TimeSeries;
+import gov.ameslab.cydime.preprocess.WekaPreprocess;
 
 import java.io.File;
 import java.text.DateFormat;
@@ -80,10 +80,13 @@ public class Config {
 	public static final String MISSION_SIM_THRESHOLD = "lexical.mission.threhold";
 	public static final String STATIC_WHITE_FILE = "label.static.white";
 	public static final String STATIC_BLACK_FILE = "label.static.black";
-	public static final String FEATURE_IP_DIR = "ip/";
-	public static final String FEATURE_ASN_DIR = "asn/";
-	public static final String FEATURE_INT_DIR = "int/";
+	
+	public static final String IP_DIR = "ip/";
+	public static final String ASN_DIR = "asn/";
+	public static final String INT_DIR = "int/";
 
+	public static final DateFormat FORMAT_DATE = new SimpleDateFormat("yyyy/MM/dd");
+	
 	public static final Config INSTANCE;
 
 	
@@ -104,7 +107,7 @@ public class Config {
 	private String[] mFeaturePaths; 
 	private String[] mPreprocessPaths;
 	private String mFeatureSet;
-	
+		
 	private Config() throws ConfigurationException {
 		mConfig = new PropertiesConfiguration(CONFIG_FILE);
 //		Log.log(Level.INFO, "Loaded configuration: " + getConfigKeys());
@@ -151,80 +154,129 @@ public class Config {
 		return mRootPath + mCurrentDatePath;
 	}
 	
-	public void setFeatureSet(String dir) {
+	public void setFeatureDir(String dir) {
 		mFeatureSet = dir;
-		DateFormat format = new SimpleDateFormat("yyyy/MM/dd");
-		List<String> features = CUtil.makeList();
-		if (FEATURE_IP_DIR.equals(mFeatureSet)) {
-			features.addAll(Arrays.asList(
-					getPath(FEATURE_DIR) + mFeatureSet + getService(),
-					getPath(FEATURE_DIR) + mFeatureSet + getNetflow(),
-					getPath(FEATURE_DIR) + mFeatureSet + getTimeSeries(),
-					getPath(FEATURE_DIR) + mFeatureSet + getDailyProfile(),
-					getPath(FEATURE_DIR) + mFeatureSet + getServiceTimeSeries(),	//Explorer
-					getPath(FEATURE_DIR) + mFeatureSet + getPairService()			//Explorer
-			));
-		} else if (FEATURE_ASN_DIR.equals(mFeatureSet)) {
-			features.addAll(Arrays.asList(
-					getPath(FEATURE_DIR) + mFeatureSet + getService(),
-					getPath(FEATURE_DIR) + mFeatureSet + getNetflow(),
-					getPath(FEATURE_DIR) + mFeatureSet + getTimeSeries(),
-					getPath(FEATURE_DIR) + mFeatureSet + getDailyProfile(),
-					getPath(FEATURE_DIR) + mFeatureSet + getServiceTimeSeries(),	//Explorer
-					getPath(FEATURE_DIR) + mFeatureSet + getPairService()			//Explorer
-			));
-		} else if (FEATURE_INT_DIR.equals(mFeatureSet)) {
-			features.addAll(Arrays.asList(
-					getPath(FEATURE_DIR) + mFeatureSet + getService(),
-					getPath(FEATURE_DIR) + mFeatureSet + getNetflow(),
-					getPath(FEATURE_DIR) + mFeatureSet + getTimeSeries(),
-					getPath(FEATURE_DIR) + mFeatureSet + getServiceTimeSeries()
-			));
-		}
-		features.addAll(TimeSeries.getRequiredPaths(getPath(PREPROCESS_DIR) + mFeatureSet));
 		
-		Date currentDate = null;
-		try {
-			currentDate = format.parse(mCurrentDatePath.substring(0, mCurrentDatePath.length() - 1));
-		} catch (ParseException e) {
-			throw new RuntimeException(e);
-		}
-		
-		Calendar cal = new GregorianCalendar();
-		cal.setTime(currentDate);
 		List<Date> dates = CUtil.makeList();
-		dates.add(currentDate);
-		for (int i = 1; i < getInt(ANALYSIS_INTERVAL); i++) {
-			cal.add(Calendar.DAY_OF_YEAR, -1);
-			Date date = cal.getTime();
-			String dateStr = format.format(date);
-			if (validFeaturePath(dateStr, features)) {
-				dates.add(date);
-			} else break;
+		if (IP_DIR.equals(mFeatureSet)) {
+			dates = findValidDates(getFeatureIPPaths());
+		} else if (ASN_DIR.equals(mFeatureSet)) {
+			dates = findValidDates(getFeatureASNPaths());
+		} else if (INT_DIR.equals(mFeatureSet)) {
+			dates = findValidDates(getFeatureIntPaths());
 		}
-		Collections.reverse(dates);
 		
 		List<String> formattedDates = CUtil.makeList();
 		for (Date d : dates) {
-			formattedDates.add(format.format(d));
+			formattedDates.add(FORMAT_DATE.format(d));
 		}
 		Log.log(Level.INFO, "Found valid feature dates: {0}", formattedDates.toString() );
 		
 		mFeaturePaths = new String[dates.size()];
 		for (int i = 0; i < mFeaturePaths.length; i++) {
-			mFeaturePaths[i] = mRootPath + format.format(dates.get(i)) + "/" + getPath(FEATURE_DIR) + mFeatureSet;
+			mFeaturePaths[i] = mRootPath + FORMAT_DATE.format(dates.get(i)) + "/" + getPath(FEATURE_DIR) + mFeatureSet;
 		}
 		
 		mPreprocessPaths = new String[dates.size()];
 		for (int i = 0; i < mPreprocessPaths.length; i++) {
-			mPreprocessPaths[i] = mRootPath + format.format(dates.get(i)) + "/" + getPath(PREPROCESS_DIR) + mFeatureSet;
+			mPreprocessPaths[i] = mRootPath + FORMAT_DATE.format(dates.get(i)) + "/" + getPath(PREPROCESS_DIR) + mFeatureSet;
 		}
 	}
 
-	private boolean validFeaturePath(String dateStr, List<String> features) {
+	public List<String> getFeatureIPPaths() {
+		return Arrays.asList(
+				getPath(FEATURE_DIR) + IP_DIR + getService(),
+				getPath(FEATURE_DIR) + IP_DIR + getNetflow(),
+				getPath(FEATURE_DIR) + IP_DIR + getTimeSeries(),
+				getPath(FEATURE_DIR) + IP_DIR + getDailyProfile(),
+				getPath(FEATURE_DIR) + IP_DIR + getServiceTimeSeries(),	//Explorer
+				getPath(FEATURE_DIR) + IP_DIR + getPairService()			//Explorer
+		);
+	}
+	
+	public List<String> getFeatureASNPaths() {
+		return Arrays.asList(
+				getPath(FEATURE_DIR) + ASN_DIR + getService(),
+				getPath(FEATURE_DIR) + ASN_DIR + getNetflow(),
+				getPath(FEATURE_DIR) + ASN_DIR + getTimeSeries(),
+				getPath(FEATURE_DIR) + ASN_DIR + getDailyProfile(),
+				getPath(FEATURE_DIR) + ASN_DIR + getServiceTimeSeries(),	//Explorer
+				getPath(FEATURE_DIR) + ASN_DIR + getPairService()			//Explorer
+		);
+	}
+
+	public List<String> getFeatureIntPaths() {
+		return Arrays.asList(
+				getPath(FEATURE_DIR) + INT_DIR + getService(),
+				getPath(FEATURE_DIR) + INT_DIR + getNetflow(),
+				getPath(FEATURE_DIR) + INT_DIR + getTimeSeries(),
+				getPath(FEATURE_DIR) + INT_DIR + getServiceTimeSeries()
+		);
+	}
+	
+	public List<String> getModelIPPaths() {
+		return Arrays.asList(
+				getPath(MODEL_DIR) + IP_DIR + getDailyFile() + WekaPreprocess.ID_SUFFIX,
+				getPath(MODEL_DIR) + IP_DIR + getDailyFile() + WekaPreprocess.ALL_SUFFIX,
+				getPath(MODEL_DIR) + IP_DIR + getDailyFile() + WekaPreprocess.REPORT_SUFFIX
+		);
+	}
+
+	public List<Date> findValidDates(List<String> pathsToCheck) {
+		return findValidDates(pathsToCheck, mCurrentDatePath);
+	}
+	
+	public List<Date> findValidDates(List<String> pathsToCheck, int daysToAnalyze) {
+		return findValidDates(pathsToCheck, mCurrentDatePath, daysToAnalyze);
+	}
+	
+	public List<Date> findValidDates(List<String> pathsToCheck, String datePath) {
+		return findValidDates(pathsToCheck, datePath, getInt(ANALYSIS_INTERVAL));
+	}
+	
+	public List<Date> findValidDates(List<String> pathsToCheck, String datePath, int daysToAnalyze) {
+		Date endDate = null;
+		try {
+			endDate = FORMAT_DATE.parse(datePath.substring(0, datePath.length() - 1));
+		} catch (ParseException e) {
+			throw new RuntimeException(e);
+		}
+		
+		Calendar cal = new GregorianCalendar();
+		cal.setTime(endDate);
+		
+		List<Date> dates = CUtil.makeList();
+		
+		int weekdays = 0;
+		if (isWeekday(cal, endDate)) {
+			dates.add(endDate);
+			weekdays++;
+		}
+		
+		while (weekdays < daysToAnalyze) {
+			cal.add(Calendar.DAY_OF_YEAR, -1);
+			Date date = cal.getTime();
+			if (isWeekday(cal, date)) {
+				String dateStr = FORMAT_DATE.format(date);
+				if (isPathValid(dateStr, pathsToCheck)) {
+					dates.add(date);
+					weekdays++;
+				} else break;
+			}
+		}
+		Collections.reverse(dates);
+		return dates;
+	}
+
+	private static boolean isWeekday(Calendar cal, Date date) {
+		int d = cal.get(Calendar.DAY_OF_WEEK);
+		return d != Calendar.SATURDAY && d != Calendar.SUNDAY;
+	}
+
+	private boolean isPathValid(String dateStr, List<String> pathsToCheck) {
 		String path = mRootPath + dateStr + "/";
-		for (String feature : features) {
-			File f = new File(path + feature);
+		for (String pathToCheck : pathsToCheck) {
+			File f = new File(path + pathToCheck);
 			if (!f.exists()) {
 				Log.log(Level.INFO, "File not found, skipping date: {0}", f.toString());
 				return false;
@@ -261,7 +313,7 @@ public class Config {
 	//getFeaturePath
 	public String getDailyProfile() {	return "pair_services_timeseries.features";	}
 	public String getService() {	return "services.features";	}
-	public String getNetflow() {	return "full_netflow.features";	}
+	public String getNetflow() {	return "netflow.features";	}
 	public String getTimeSeries() {	return "timeseries.features";	}
 	public String getTimeAccess() {	return "timeseries.features.access";	}
 	public String getServiceTimeSeries() {	return "services_timeseries.features";	}
@@ -274,11 +326,15 @@ public class Config {
 	public String getIPASNMapPath() {	return getRootDatePath() + getPath(PREPROCESS_DIR) + "ipASNMap.csv";	}
 	public String getCommunityPath() {	return getCurrentPreprocessPath() + "pair_services.features.bicom.csv";	}
 	public String getExtIntGraphPath() {	return getCurrentPreprocessPath() + "pair_services.features.graph.csv";	}
-	
+
+	public String getBasePath() {	return getCurrentPreprocessPath() + "base";	}
+	public String getDerivedPath() {	return getCurrentPreprocessPath() + "derived";	}
+
 	//getModelPath
-	public String getBasePath() {	return getCurrentModelPath() + "base";	}
-	public String getBaseNormPath() {	return getCurrentModelPath() + "base.norm";	}
-	public String getBaseScorePath() {	return getCurrentModelPath() + "base_score";	}
+	public String getDailyFile() {	return "daily";	}
+	public String getDailyPath() {	return getCurrentModelPath() + getDailyFile();	}
+	public String getAggregatedPath() {	return getCurrentModelPath() + "aggregated";	}
+	public String getAggregatedNormPath() {	return getCurrentModelPath() + "aggregated.norm";	}
 	public String getModelPath() {	return getCurrentModelPath() + "model";	}
 	public String getRankScorePath() {	return getCurrentModelPath() + "rank_score";	}
 	

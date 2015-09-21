@@ -69,7 +69,11 @@ public class RankerFactory {
 	}
 	
 	public static AbstractClassifier makeFeatureProjector(int index) {
-		return new FeatureProjector(index);
+		return makeFeatureProjector(index, false);
+	}
+	
+	public static AbstractClassifier makeFeatureProjector(int index, boolean doInvert) {
+		return new FeatureProjector(index, doInvert);
 	}
 	
 	public static AbstractClassifier makeLogistic() {

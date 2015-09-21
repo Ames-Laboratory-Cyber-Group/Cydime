@@ -85,13 +85,13 @@ public class CydimeRanker {
 
 	public CydimeRanker(String[] args) {
 		Config.INSTANCE.setParam(args[0]);
-		Config.INSTANCE.setFeatureSet(Config.FEATURE_IP_DIR);
+		Config.INSTANCE.setFeatureDir(Config.IP_DIR);
 	}
 
 	private void run() throws Exception {
-		InstanceDatabase baseNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
+		InstanceDatabase aggNorm = InstanceDatabase.load(Config.INSTANCE.getAggregatedNormPath());
 		
-		List<String> ips = CUtil.makeList(baseNorm.getIDs());
+		List<String> ips = CUtil.makeList(aggNorm.getIDs());
 		
 		ListDatabase whiteDB = ListDatabase.read(Config.INSTANCE.getString(Config.STATIC_WHITE_FILE));
 		LabelSample whiteLabel = new LabelSample(whiteDB.getList(ips));
@@ -109,11 +109,11 @@ public class CydimeRanker {
 		
 		CUtil.divide(preds, RUNS);
 		
-		writeFinalResult(baseNorm, preds);
+		writeFinalResult(aggNorm, preds);
 	}
 
 	private void run(int runID, LabelSplit split, Map<String, Double> preds) throws Exception {
-		InstanceDatabase baseNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
+		InstanceDatabase baseNorm = InstanceDatabase.load(Config.INSTANCE.getAggregatedNormPath());
 		
 		for (String ip : split.getTrainWhite()) {
 			baseNorm.setLabel(ip, LabelSplit.LABEL_POSITIVE);
@@ -140,12 +140,12 @@ public class CydimeRanker {
 		CUtil.add(preds, pred);
 	}
 
-	private void writeFinalResult(InstanceDatabase baseNorm, Map<String, Double> preds) throws IOException {
+	private void writeFinalResult(InstanceDatabase aggNorm, Map<String, Double> preds) throws IOException {
 		BufferedWriter out = new BufferedWriter(new FileWriter(Config.INSTANCE.getFinalResultPath()));
 		out.write("ID,score");
 		out.newLine();
 		
-		for (String id : baseNorm.getIDs()) {
+		for (String id : aggNorm.getIDs()) {
 			out.write(id + ",");
 			out.write(String.valueOf(preds.get(id)));
 			out.newLine();

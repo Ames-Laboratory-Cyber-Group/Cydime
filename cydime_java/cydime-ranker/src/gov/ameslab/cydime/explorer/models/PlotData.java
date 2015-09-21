@@ -90,13 +90,13 @@ public class PlotData {
 		
 	public void load(DomainDatabase domainDB) throws IOException {
 		mDomainDB = domainDB;
-		Config.INSTANCE.setFeatureSet(Config.FEATURE_IP_DIR);
+		Config.INSTANCE.setFeatureDir(Config.IP_DIR);
 		mExtIPs = InstanceDatabase.load(Config.INSTANCE.getBasePath()).getIDs();
 		mExtIPSet = CUtil.makeSet(mExtIPs);
 		
 		loadTable();
 		
-		Config.INSTANCE.setFeatureSet(Config.FEATURE_INT_DIR);
+		Config.INSTANCE.setFeatureDir(Config.INT_DIR);
     	mIntIPs = InstanceDatabase.load(Config.INSTANCE.getBasePath()).getIDs();
     }
 	
@@ -156,9 +156,9 @@ public class PlotData {
         
         CSVReader in = new CSVReader();
 //		ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,avg_sim,var_sim,max_sim,class
-		in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_SUFFIX);
+		in.add(Config.INSTANCE.getAggregatedNormPath() + WekaPreprocess.CSV_SUFFIX);
 //      ID,service,cc,total_records,total_bytes,earliest_starttime,latest_endtime,total_peercount,total_localport,total_remoteport,ratio_local_remote_port,Bytes_Fourier0,Bytes_Fourier1,access_hours,access_days,workhour_perc,service_icmp,service_ssh,service_smtp,service_domain,service_rtsp,service_http,service_mail,service_vpn,service_OTHER,hour_0,hour_4,hour_8,hour_12,hour_16,hour_20,avg_sim,var_sim,max_sim,class
-        in.add(Config.INSTANCE.getBaseNormPath() + WekaPreprocess.CSV_REPORT_SUFFIX);
+        in.add(Config.INSTANCE.getAggregatedNormPath() + WekaPreprocess.CSV_REPORT_SUFFIX);
 //      ID,score
         in.add(Config.INSTANCE.getFinalResultPath());
         int i = 0;

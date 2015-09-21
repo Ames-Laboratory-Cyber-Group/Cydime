@@ -37,10 +37,14 @@
  * POSSIBILITY OF SUCH DAMAGE. 
  */
 
-package gov.ameslab.cydime.ranker;
+package gov.ameslab.cydime.aggregate;
 
 import gov.ameslab.cydime.model.InstanceDatabase;
 import gov.ameslab.cydime.model.ListDatabase;
+import gov.ameslab.cydime.preprocess.WekaPreprocess;
+import gov.ameslab.cydime.ranker.LabelSample;
+import gov.ameslab.cydime.ranker.LabelSplit;
+import gov.ameslab.cydime.ranker.RankerFactory;
 import gov.ameslab.cydime.ranker.evaluate.AveragePrecision;
 import gov.ameslab.cydime.ranker.evaluate.NDCG;
 import gov.ameslab.cydime.ranker.evaluate.RankEvaluator;
@@ -56,42 +60,27 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import weka.classifiers.AbstractClassifier;
 import weka.core.Instance;
 import weka.core.Instances;
-import weka.filters.Filter;
-import weka.filters.unsupervised.attribute.Remove;
 
 /**
- * Cydime Predictor experimenter using a set of representative predictors.
  * 
  * @author Harris Lin (harris.lin.nz at gmail.com)
  */
-public class CydimeRankerFeatureBlockExp {
+public class CydimeRankerAggExp {
 
-	private static final Logger Log = Logger.getLogger(CydimeRankerFeatureBlockExp.class.getName());
+	private static final Logger Log = Logger.getLogger(CydimeRankerAggExp.class.getName());
 
 	public static final int RUNS = 10;
-	public static final double TRAIN_PERCENT = 100.0 * 2 / 3;
+	public static final double TRAIN_PERCENT = 0.0; //100.0 * 2 / 3;
 	private static final DecimalFormat LABEL_FORMAT = new DecimalFormat("0");
 	
-	private AbstractClassifier[] mAlgorithms = new AbstractClassifier[] {
-			RankerFactory.makeNaiveBayes(),
-			RankerFactory.makeLogistic(),
-			RankerFactory.makeAdaBoostM1(),
-	};
-	
-	private int[][] mFeatures = new int[][] {
-//			{0,2,3,4,5,6,7,8,9,15,16,17,18,19,20,21,22,23, 33}, //Flow
-//			{10,11,12,13,14,24,25,26,27,28,29, 33}, //Temporal
-//			{1, 33}, //Location
-//			{30,31,32, 33}, //Semantic
-//			{0,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29, 33}, //Flow+Temporal
-//			{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29, 33}, //Flow+Temporal+Location
-	};
+	private AbstractClassifier[] mAlgorithms;
 	
 	private RankEvaluator[] mEvaluators = new RankEvaluator[] {
 			new AveragePrecision(),
@@ -106,20 +95,29 @@ public class CydimeRankerFeatureBlockExp {
 			return;
 		}
 
-		new CydimeRankerFeatureBlockExp(args).run();
+		new CydimeRankerAggExp(args).run();
 	}
 
 	private static void printUsage() {
-		System.out.println("[java] CydimeRankerExp FEATURE_DIR LABEL_PERCENT");
+		System.out.println("[java] CydimeRankerAggExp FEATURE_DIR LABEL_PERCENT");
 		System.out.println("    FEATURE_DIR: date path specifying feature files");
 		System.out.println("    LABEL_PERCENT: [1,99] percentage of labeled instances");
 	}
 
-	public CydimeRankerFeatureBlockExp(String[] args) {
+	public CydimeRankerAggExp(String[] args) {
 		Config.INSTANCE.setParam(args[0]);
 		Config.INSTANCE.setFeatureDir(Config.IP_DIR);
 
 		mLabelPercentage = Double.parseDouble(args[1]);
+		
+		List<AbstractClassifier> algorithms = CUtil.makeList();
+		algorithms.add(RankerFactory.makeRandomRanker());
+		for (int i = 2; i <= 41; i++) {
+			algorithms.add(RankerFactory.makeFeatureProjector(i, false));
+			algorithms.add(RankerFactory.makeFeatureProjector(i, true));
+		}
+		mAlgorithms = new AbstractClassifier[algorithms.size()];
+		algorithms.toArray(mAlgorithms);		
 	}
 
 	private void run() throws Exception {
@@ -133,97 +131,93 @@ public class CydimeRankerFeatureBlockExp {
 		ListDatabase blackDB = ListDatabase.read(Config.INSTANCE.getString(Config.STATIC_BLACK_FILE));
 		LabelSample blackLabel = new LabelSample(blackDB.getList(ips));
 		
+		printStats(ips, whiteDB.getList(ips), blackDB.getList(ips));
+		
 		for (int run = 0; run < RUNS; run++) {
 			List<String> whiteSample = whiteLabel.getNextSample();
 			List<String> blackSample = blackLabel.getNextSample();
 			LabelSplit split = new LabelSplit(ips, whiteSample, blackSample, TRAIN_PERCENT, mLabelPercentage, new Random(run));
-			runU0(run, split);
+			run00(run, split);
 		}
 		
-		summarize("U0");
+		summarize("00");
 	}
 
-	private Remove getFilter(int[] fs) {
-		Remove filter = new Remove();
-		filter.setInvertSelection(true);
-		filter.setAttributeIndicesArray(fs);
-		return filter;
+	private void printStats(List<String> ips, List<List<String>> white, List<List<String>> black) {
+		System.out.println("IP = " + ips.size());
+		System.out.println("White subnets = " + white.size());
+		System.out.println("Black subnets = " + black.size());
+		
+		int subnets = 0;
+		int sum = 0;
+		for (List<String> list : white) {
+			subnets++;
+			sum += list.size();
+		}
+		for (List<String> list : black) {
+			subnets++;
+			sum += list.size();
+		}
+		System.out.println("Average = " + (1.0 * sum / subnets));
 	}
-	
-	private Instances getTrain(InstanceDatabase baseNorm, LabelSplit split) {
-		Instances train = new Instances(baseNorm.getWekaInstances(), 0);
+
+	private void run00(int runID, LabelSplit split) throws Exception {
+		InstanceDatabase aggNorm = InstanceDatabase.load(Config.INSTANCE.getAggregatedNormPath());
+		String labelAnnot = "_00label" + LABEL_FORMAT.format(mLabelPercentage);
 		
 		for (String ip : split.getTrainWhite()) {
-			Instance inst = baseNorm.getWekaInstance(ip);
-			inst.setClassValue(LabelSplit.LABEL_POSITIVE);
-			inst.setDataset(train);
-			train.add(inst);
+			aggNorm.setLabel(ip, LabelSplit.LABEL_POSITIVE);
 		}
 		
-//		for (String ip : split.getTrainBlack()) {
-		for (String ip : split.getTrainNonWhite()) {
-			Instance inst = baseNorm.getWekaInstance(ip);
-			inst.setClassValue(LabelSplit.LABEL_NEGATIVE);
-			inst.setDataset(train);
-			train.add(inst);
+		for (String ip : split.getTrainBlack()) {
+			aggNorm.setLabel(ip, LabelSplit.LABEL_NEGATIVE);
 		}
+
+		Instances wekaTrain = aggNorm.getWekaTrain();
+		WekaPreprocess.save(wekaTrain, Config.INSTANCE.getCurrentReportPath() + "00train" + runID + ".arff");
 		
-		return train;
-	}
-	
-	private Instances getTest(InstanceDatabase baseNorm, LabelSplit split) {
-		Instances test = new Instances(baseNorm.getWekaInstances(), 0);
-		for (String ip : split.getTestKnown()) {
-			Instance inst = baseNorm.getWekaInstance(ip);
-			inst.setDataset(test);
-			test.add(inst);
-		}
-		return test;
-	}
-	
-	private void runU0(int runID, LabelSplit split) throws Exception {
-		InstanceDatabase aggNorm = InstanceDatabase.load(Config.INSTANCE.getAggregatedNormPath());
-		String labelAnnot = "_U0label" + LABEL_FORMAT.format(mLabelPercentage);
-		
-		Instances wekaTrain = getTrain(aggNorm, split);
-		Instances wekaTest = getTest(aggNorm, split);
-		
-		for (int f = 0; f < mFeatures.length; f++) {
-			Log.log(Level.INFO, "Preparing feature set {0}...", f);
+		for (int i = 0; i < mAlgorithms.length; i++) {
+			Log.log(Level.INFO, "Building " + i + ": " + mAlgorithms[i].toString());
 			
-			Instances wekaTrainSub = null;
-			Instances wekaTestSub = null;
+			mAlgorithms[i].buildClassifier(wekaTrain);
 			
-			Remove filter = getFilter(mFeatures[f]);		
-			try {
-				filter.setInputFormat(wekaTrain);
-				wekaTrainSub = Filter.useFilter(wekaTrain, filter);
-				wekaTestSub = Filter.useFilter(wekaTest, filter);
-			} catch (Exception e) {
-				e.printStackTrace();
+			Map<String, Double> preds = CUtil.makeMap();
+			for (String ip : split.getTestKnown()) {
+				Instance inst = aggNorm.getWekaInstance(ip);
+				double dist[] = mAlgorithms[i].distributionForInstance(inst);
+				preds.put(ip, dist[1]);
 			}
 			
-			for (int i = 0; i < mAlgorithms.length; i++) {
-				Log.log(Level.INFO, "Building {0}...", i);
-				
-				mAlgorithms[i].buildClassifier(wekaTrainSub);
-				
-				Map<String, Double> preds = CUtil.makeMap();
-				List<String> testKnown = split.getTestKnown();
-				for (int t = 0; t < testKnown.size(); t++) {
-					String ip = testKnown.get(t);
-					Instance inst = wekaTestSub.get(t);
-					double dist[] = mAlgorithms[i].distributionForInstance(inst);
-					preds.put(ip, dist[1]);
-				}
-				
-				writeScore(getScoreFile(runID, labelAnnot, f, i), split.getTestWhite(), preds);
-			}
+			writeRank(getResultFile(runID, labelAnnot, i), split.getTestKnown(), split.getTestWhite(), preds);
+			writeScore(getScoreFile(runID, labelAnnot, i), split.getTestWhite(), preds);
 		}
 	}
-	
-	private String getScoreFile(int runID, String labelAnnot, int fID, int algID) {
-		return Config.INSTANCE.getCurrentReportPath() + "score" + labelAnnot + "_run" + runID + "_set" + fID + "_ranker" + algID + ".csv";
+
+	private String getResultFile(int runID, String labelAnnot, int algID) {
+		return Config.INSTANCE.getCurrentReportPath() + "result" + labelAnnot + "_run" + runID + "_ranker" + algID + ".csv";
+	}
+
+	private String getScoreFile(int runID, String labelAnnot, int algID) {
+		return Config.INSTANCE.getCurrentReportPath() + "score" + labelAnnot + "_run" + runID + "_ranker" + algID + ".csv";
+	}
+
+	private void writeRank(String file, List<String> allIPs, List<String> whiteIPs, Map<String, Double> preds) throws IOException {
+		Set<String> whiteSet = CUtil.makeSet(whiteIPs);
+		BufferedWriter out = new BufferedWriter(new FileWriter(file));
+		for (String ip : allIPs) {
+			double pred = preds.get(ip);
+			out.write(ip + ",");
+			
+			if (whiteSet.contains(ip)) {
+				out.write("1,");
+			} else {
+				out.write("0,");
+			}
+			
+			out.write(String.valueOf(pred));
+			out.newLine();
+		}		
+		out.close();
 	}
 
 	private void writeScore(String file, List<String> testWhite, Map<String, Double> preds) throws IOException {
@@ -242,17 +236,14 @@ public class CydimeRankerFeatureBlockExp {
 	private void summarize(String prefix) throws IOException {
 		String labelAnnot = "_" + prefix + "label" + LABEL_FORMAT.format(mLabelPercentage);
 		
-		for (int f = 0; f < mFeatures.length; f++) {
-			RankerResultList results = new RankerResultList(mAlgorithms.length, mEvaluators.length, RUNS);
-			
-			for (int i = 0; i < mAlgorithms.length; i++) {
-				for (int run = 0; run < RUNS; run++) {
-					results.addRun(i, run, getScoreFile(run, labelAnnot, f, i));
-				}
+		RankerResultList results = new RankerResultList(mAlgorithms.length, mEvaluators.length, RUNS);
+		for (int i = 0; i < mAlgorithms.length; i++) {
+			for (int run = 0; run < RUNS; run++) {
+				results.addRun(i, run, getScoreFile(run, labelAnnot, i));
 			}
-			
-			results.write(Config.INSTANCE.getCurrentReportPath() + "summary" + labelAnnot + "_set" + f + ".csv", mEvaluators);
 		}
+		
+		results.write(Config.INSTANCE.getCurrentReportPath() + "summary" + labelAnnot + ".csv", mEvaluators);
 	}
 
 }

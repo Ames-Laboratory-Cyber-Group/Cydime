@@ -78,44 +78,8 @@ public class CydimeRankerExp {
 	public static final double TRAIN_PERCENT = 100.0 * 2 / 3;
 	private static final DecimalFormat LABEL_FORMAT = new DecimalFormat("0");
 	
-	private AbstractClassifier[] mAlgorithms = new AbstractClassifier[] {
-			RankerFactory.makeRandomRanker(),
-			
-			RankerFactory.makeFeatureProjector(2),
-			RankerFactory.makeFeatureProjector(3),
-			RankerFactory.makeFeatureProjector(10),
-			RankerFactory.makeFeatureProjector(12),
-			RankerFactory.makeFeatureProjector(30),
-			RankerFactory.makeFeatureProjector(31),
-			RankerFactory.makeFeatureProjector(32),
-			
-			RankerFactory.makeNaiveBayes(),
-			RankerFactory.makeLogistic(),
-			RankerFactory.makeREPTree(),
-			RankerFactory.makeLibSVM(),
-			RankerFactory.makeRandomForest(),			
-			RankerFactory.makeAdaBoostM1(),
-	};
-	
-	private AbstractClassifier[] mAlgorithmsU = new AbstractClassifier[] {
-			RankerFactory.makeRandomRanker(),
-			
-			RankerFactory.makeFeatureProjector(2),
-			RankerFactory.makeFeatureProjector(3),
-			RankerFactory.makeFeatureProjector(10),
-			RankerFactory.makeFeatureProjector(12),
-			RankerFactory.makeFeatureProjector(30),
-			RankerFactory.makeFeatureProjector(31),
-			RankerFactory.makeFeatureProjector(32),
-			
-			RankerFactory.makeNaiveBayes(),
-			RankerFactory.makeLogistic(),
-			RankerFactory.makeREPTree(),
-//			RankerFactory.makeLibSVM(),
-			RankerFactory.makeResampleEnsemble(RankerFactory.makeLibSVM(10), 1.0, new Random(1)),
-			RankerFactory.makeRandomForest(),			
-			RankerFactory.makeAdaBoostM1(),
-	};
+	private AbstractClassifier[] mAlgorithms;
+	private AbstractClassifier[] mAlgorithmsU;
 	
 	private RankEvaluator[] mEvaluators = new RankEvaluator[] {
 			new AveragePrecision(),
@@ -141,15 +105,46 @@ public class CydimeRankerExp {
 
 	public CydimeRankerExp(String[] args) {
 		Config.INSTANCE.setParam(args[0]);
-		Config.INSTANCE.setFeatureSet(Config.FEATURE_IP_DIR);
+		Config.INSTANCE.setFeatureDir(Config.IP_DIR);
 
 		mLabelPercentage = Double.parseDouble(args[1]);
+		
+		List<AbstractClassifier> algorithms = CUtil.makeList();
+		algorithms.add(RankerFactory.makeRandomRanker());
+		algorithms.add(RankerFactory.makeNaiveBayes());
+		algorithms.add(RankerFactory.makeLogistic());
+		algorithms.add(RankerFactory.makeREPTree());
+		algorithms.add(RankerFactory.makeLibSVM());
+		algorithms.add(RankerFactory.makeRandomForest());			
+		algorithms.add(RankerFactory.makeAdaBoostM1());
+		for (int i = 2; i <= 41; i++) {
+			algorithms.add(RankerFactory.makeFeatureProjector(i, false));
+			algorithms.add(RankerFactory.makeFeatureProjector(i, true));
+		}
+		mAlgorithms = new AbstractClassifier[algorithms.size()];
+		algorithms.toArray(mAlgorithms);
+		
+		List<AbstractClassifier> algorithmsU = CUtil.makeList();
+		algorithmsU.add(RankerFactory.makeRandomRanker());
+		algorithmsU.add(RankerFactory.makeNaiveBayes());
+		algorithmsU.add(RankerFactory.makeLogistic());
+		algorithmsU.add(RankerFactory.makeREPTree());
+//		algorithms.add(RankerFactory.makeLibSVM());
+		algorithmsU.add(RankerFactory.makeResampleEnsemble(RankerFactory.makeLibSVM(10), 1.0, new Random(1)));
+		algorithmsU.add(RankerFactory.makeRandomForest());			
+		algorithmsU.add(RankerFactory.makeAdaBoostM1());
+		for (int i = 2; i <= 41; i++) {
+			algorithmsU.add(RankerFactory.makeFeatureProjector(i, false));
+			algorithmsU.add(RankerFactory.makeFeatureProjector(i, true));
+		}
+		mAlgorithmsU = new AbstractClassifier[algorithmsU.size()];
+		algorithmsU.toArray(mAlgorithmsU);	
 	}
 
 	private void run() throws Exception {
-		InstanceDatabase baseNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
+		InstanceDatabase aggNorm = InstanceDatabase.load(Config.INSTANCE.getAggregatedNormPath());
 		
-		List<String> ips = CUtil.makeList(baseNorm.getIDs());
+		List<String> ips = CUtil.makeList(aggNorm.getIDs());
 		
 		ListDatabase whiteDB = ListDatabase.read(Config.INSTANCE.getString(Config.STATIC_WHITE_FILE));
 		LabelSample whiteLabel = new LabelSample(whiteDB.getList(ips));
@@ -192,18 +187,18 @@ public class CydimeRankerExp {
 	}
 
 	private void run00(int runID, LabelSplit split) throws Exception {
-		InstanceDatabase baseNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
+		InstanceDatabase aggNorm = InstanceDatabase.load(Config.INSTANCE.getAggregatedNormPath());
 		String labelAnnot = "_00label" + LABEL_FORMAT.format(mLabelPercentage);
 		
 		for (String ip : split.getTrainWhite()) {
-			baseNorm.setLabel(ip, LabelSplit.LABEL_POSITIVE);
+			aggNorm.setLabel(ip, LabelSplit.LABEL_POSITIVE);
 		}
 		
 		for (String ip : split.getTrainBlack()) {
-			baseNorm.setLabel(ip, LabelSplit.LABEL_NEGATIVE);
+			aggNorm.setLabel(ip, LabelSplit.LABEL_NEGATIVE);
 		}
 
-		Instances wekaTrain = baseNorm.getWekaTrain();
+		Instances wekaTrain = aggNorm.getWekaTrain();
 		WekaPreprocess.save(wekaTrain, Config.INSTANCE.getCurrentReportPath() + "00train" + runID + ".arff");
 		
 		for (int i = 0; i < mAlgorithms.length; i++) {
@@ -213,7 +208,7 @@ public class CydimeRankerExp {
 			
 			Map<String, Double> preds = CUtil.makeMap();
 			for (String ip : split.getTestKnown()) {
-				Instance inst = baseNorm.getWekaInstance(ip);
+				Instance inst = aggNorm.getWekaInstance(ip);
 				double dist[] = mAlgorithms[i].distributionForInstance(inst);
 				preds.put(ip, dist[1]);
 			}
@@ -224,18 +219,18 @@ public class CydimeRankerExp {
 	}
 
 	private void runU0(int runID, LabelSplit split) throws Exception {
-		InstanceDatabase baseNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
+		InstanceDatabase aggNorm = InstanceDatabase.load(Config.INSTANCE.getAggregatedNormPath());
 		String labelAnnot = "_U0label" + LABEL_FORMAT.format(mLabelPercentage);
 		
 		for (String ip : split.getTrainWhite()) {
-			baseNorm.setLabel(ip, LabelSplit.LABEL_POSITIVE);
+			aggNorm.setLabel(ip, LabelSplit.LABEL_POSITIVE);
 		}
 		
 		for (String ip : split.getTrainNonWhite()) {
-			baseNorm.setLabel(ip, LabelSplit.LABEL_NEGATIVE);
+			aggNorm.setLabel(ip, LabelSplit.LABEL_NEGATIVE);
 		}
 
-		Instances wekaTrain = baseNorm.getWekaTrain();
+		Instances wekaTrain = aggNorm.getWekaTrain();
 		for (int i = 0; i < mAlgorithmsU.length; i++) {
 			Log.log(Level.INFO, "Building {0}...", i);
 			
@@ -243,7 +238,7 @@ public class CydimeRankerExp {
 			
 			Map<String, Double> preds = CUtil.makeMap();
 			for (String ip : split.getTestKnown()) {
-				Instance inst = baseNorm.getWekaInstance(ip);
+				Instance inst = aggNorm.getWekaInstance(ip);
 				double dist[] = mAlgorithmsU[i].distributionForInstance(inst);
 				preds.put(ip, dist[1]);
 			}
@@ -254,18 +249,18 @@ public class CydimeRankerExp {
 	}
 
 	private void runUU(int runID, LabelSplit split) throws Exception {
-		InstanceDatabase baseNorm = InstanceDatabase.load(Config.INSTANCE.getBaseNormPath());
+		InstanceDatabase aggNorm = InstanceDatabase.load(Config.INSTANCE.getAggregatedNormPath());
 		String labelAnnot = "_UUlabel" + LABEL_FORMAT.format(mLabelPercentage);
 		
 		for (String ip : split.getTrainWhite()) {
-			baseNorm.setLabel(ip, LabelSplit.LABEL_POSITIVE);
+			aggNorm.setLabel(ip, LabelSplit.LABEL_POSITIVE);
 		}
 		
 		for (String ip : split.getTrainNonWhite()) {
-			baseNorm.setLabel(ip, LabelSplit.LABEL_NEGATIVE);
+			aggNorm.setLabel(ip, LabelSplit.LABEL_NEGATIVE);
 		}
 
-		Instances wekaTrain = baseNorm.getWekaTrain();
+		Instances wekaTrain = aggNorm.getWekaTrain();
 		for (int i = 0; i < mAlgorithmsU.length; i++) {
 			Log.log(Level.INFO, "Building {0}...", i);
 			
@@ -273,7 +268,7 @@ public class CydimeRankerExp {
 			
 			Map<String, Double> preds = CUtil.makeMap();
 			for (String ip : split.getTestAll()) {
-				Instance inst = baseNorm.getWekaInstance(ip);
+				Instance inst = aggNorm.getWekaInstance(ip);
 				double dist[] = mAlgorithmsU[i].distributionForInstance(inst);
 				preds.put(ip, dist[1]);
 			}

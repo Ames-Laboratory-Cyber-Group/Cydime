@@ -51,6 +51,10 @@ class CydimeModel(object):
         command = self.command_base + ' gov.ameslab.cydime.preprocess.CydimePreprocessor '
         command += self.date_path
         self.exec_command(command)
+        # aggregate ARFF
+        command = self.command_base + ' gov.ameslab.cydime.aggregate.CydimeAggregator '
+        command += self.date_path
+        self.exec_command(command)
 
     def run(self):
         '''run model using command_base
